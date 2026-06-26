@@ -26,6 +26,8 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
   const [generalNotes] = useState<GeneralNote[]>(
     testGeneralNotes as GeneralNote[],
   );
+  const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
+  const [durationSeconds, setDurationSeconds] = useState(0);
   const videoPlayerRef = useRef<HTMLVideoElement | null>(null);
 
   function handleTimestampClick(timestampSeconds: number) {
@@ -37,6 +39,10 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
 
     video.currentTime = timestampSeconds;
     video.play();
+  }
+
+  function handleTimestampNoteAddStart() {
+    videoPlayerRef.current?.pause();
   }
 
   return (
@@ -55,13 +61,21 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
           align="stretch"
         >
           <Box flex={{ base: "1 1 auto", md: "0 0 60%" }} w="100%">
-            <UploadedVideoPlayer file={selectedFile} videoRef={videoPlayerRef} />
+            <UploadedVideoPlayer
+              file={selectedFile}
+              videoRef={videoPlayerRef}
+              onDurationChange={setDurationSeconds}
+              onTimeChange={setCurrentTimeSeconds}
+            />
           </Box>
 
           <Stack flex="1 1 0" gap="md" mih={0} w="100%">
             <Box flex="1 1 0" mih={0}>
               <TimeStampedNotes
+                currentTimeSeconds={currentTimeSeconds}
+                durationSeconds={durationSeconds}
                 notes={notes}
+                onAddNoteStart={handleTimestampNoteAddStart}
                 onTimestampClick={handleTimestampClick}
               />
             </Box>

@@ -1,46 +1,106 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  AspectRatio,
-  Box,
-  Button,
-  Group,
-  Paper,
-  Stack,
-  Switch,
-  Text,
-} from "@mantine/core";
+import { AspectRatio, Box, Paper, Stack, Text } from "@mantine/core";
 import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
-import { Layer, Line, Stage } from "react-konva";
+import { Circle, Layer, Line, Rect, Stage } from "react-konva";
+import {
+  DrawingToolbar,
+  type DrawingTool,
+} from "./DrawingToolbar";
 
 type UploadedVideoPlayerProps = {
   file: File;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  onDurationChange?: (durationSeconds: number) => void;
+  onTimeChange?: (currentTimeSeconds: number) => void;
 };
 
-type DrawingTool = "pen" | "eraser";
-
-type DrawingLine = {
-  tool: DrawingTool;
+type FreehandDrawing = {
+  id: string;
+  type: "freehand";
+  color: string;
   points: number[];
+  strokeWidth: number;
+  tool: Extract<DrawingTool, "pen" | "eraser">;
 };
 
-// TODO: Add a proper drawing toolbar, colors, and stroke widths
+type RectangleDrawing = {
+  id: string;
+  type: "rectangle";
+  color: string;
+  height: number;
+  strokeWidth: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+type CircleDrawing = {
+  id: string;
+  type: "circle";
+  color: string;
+  radius: number;
+  strokeWidth: number;
+  x: number;
+  y: number;
+};
+
+type DrawingShape = FreehandDrawing | RectangleDrawing | CircleDrawing;
+
+type Point = {
+  x: number;
+  y: number;
+};
+
+type NormalizedRect = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+function createDrawingId() {
+  return crypto.randomUUID();
+}
+
+function getDistance(start: Point, end: Point) {
+  return Math.hypot(end.x - start.x, end.y - start.y);
+}
+
+function normalizeRect(rectangle: RectangleDrawing): NormalizedRect {
+  return {
+    x: Math.min(rectangle.x, rectangle.x + rectangle.width),
+    y: Math.min(rectangle.y, rectangle.y + rectangle.height),
+    width: Math.abs(rectangle.width),
+    height: Math.abs(rectangle.height),
+  };
+}
+
+function isFreehandTool(
+  tool: DrawingTool,
+): tool is Extract<DrawingTool, "pen" | "eraser"> {
+  return tool === "pen" || tool === "eraser";
+}
+
 // TODO: Associate drawings with a video timestamp and a duration in seconds
 // TODO: Decouple the drawing logic and types from this file to another file
 
 export function UploadedVideoPlayer({
   file,
+  onDurationChange,
+  onTimeChange,
   videoRef,
 }: UploadedVideoPlayerProps) {
   const videoUrl = useMemo(() => URL.createObjectURL(file), [file]);
   const [containerRef, containerRect] = useResizeObserver<HTMLDivElement>();
-  const [lines, setLines] = useState<DrawingLine[]>([]);
+  const [drawings, setDrawings] = useState<DrawingShape[]>([]);
+  const [drawingColor, setDrawingColor] = useState("#df4b26");
   const [isDrawingModeEnabled, setIsDrawingModeEnabled] = useState(false);
+  const [strokeWidth, setStrokeWidth] = useState(5);
+  const [tool, setTool] = useState<DrawingTool>("pen");
   const isDrawing = useRef(false);
-  const tool: DrawingTool = "pen";
 
   function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
     if (!isDrawingModeEnabled) {
@@ -54,9 +114,51 @@ export function UploadedVideoPlayer({
       return;
     }
 
-    setLines((currentLines) => [
-      ...currentLines,
-      { tool, points: [position.x, position.y] },
+    if (isFreehandTool(tool)) {
+      setDrawings((currentDrawings) => [
+        ...currentDrawings,
+        {
+          id: createDrawingId(),
+          type: "freehand",
+          color: drawingColor,
+          points: [position.x, position.y],
+          strokeWidth,
+          tool,
+        },
+      ]);
+
+      return;
+    }
+
+    if (tool === "rectangle") {
+      setDrawings((currentDrawings) => [
+        ...currentDrawings,
+        {
+          id: createDrawingId(),
+          type: "rectangle",
+          color: drawingColor,
+          height: 0,
+          strokeWidth,
+          width: 0,
+          x: position.x,
+          y: position.y,
+        },
+      ]);
+
+      return;
+    }
+
+    setDrawings((currentDrawings) => [
+      ...currentDrawings,
+      {
+        id: createDrawingId(),
+        type: "circle",
+        color: drawingColor,
+        radius: 0,
+        strokeWidth,
+        x: position.x,
+        y: position.y,
+      },
     ]);
   }
 
@@ -72,18 +174,39 @@ export function UploadedVideoPlayer({
       return;
     }
 
-    setLines((currentLines) => {
-      const lastLine = currentLines.at(-1);
+    setDrawings((currentDrawings) => {
+      const lastDrawing = currentDrawings.at(-1);
 
-      if (!lastLine) {
-        return currentLines;
+      if (!lastDrawing) {
+        return currentDrawings;
+      }
+
+      if (lastDrawing.type === "freehand") {
+        return [
+          ...currentDrawings.slice(0, -1),
+          {
+            ...lastDrawing,
+            points: [...lastDrawing.points, point.x, point.y],
+          },
+        ];
+      }
+
+      if (lastDrawing.type === "rectangle") {
+        return [
+          ...currentDrawings.slice(0, -1),
+          {
+            ...lastDrawing,
+            width: point.x - lastDrawing.x,
+            height: point.y - lastDrawing.y,
+          },
+        ];
       }
 
       return [
-        ...currentLines.slice(0, -1),
+        ...currentDrawings.slice(0, -1),
         {
-          ...lastLine,
-          points: [...lastLine.points, point.x, point.y],
+          ...lastDrawing,
+          radius: getDistance(lastDrawing, point),
         },
       ];
     });
@@ -98,9 +221,9 @@ export function UploadedVideoPlayer({
     isDrawing.current = false;
   }
 
-  function handleUndoLastLine() {
+  function handleUndoLastDrawing() {
     isDrawing.current = false;
-    setLines((currentLines) => currentLines.slice(0, -1));
+    setDrawings((currentDrawings) => currentDrawings.slice(0, -1));
   }
 
   useEffect(() => {
@@ -113,7 +236,7 @@ export function UploadedVideoPlayer({
       }
 
       event.preventDefault();
-      handleUndoLastLine();
+      handleUndoLastDrawing();
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -132,26 +255,22 @@ export function UploadedVideoPlayer({
   return (
     <Paper withBorder p="md" radius="md">
       <Stack gap="sm">
-        <Group justify="space-between" align="center">
+        <Stack gap="sm">
           <Text fw={600}>{file.name}</Text>
-          <Group gap="sm">
-            <Button
-              disabled={lines.length === 0}
-              size="compact-sm"
-              variant="light"
-              onClick={handleUndoLastLine}
-            >
-              Undo
-            </Button>
-            <Switch
-              checked={isDrawingModeEnabled}
-              label="Drawing mode"
-              onChange={(event) =>
-                handleDrawingModeChange(event.currentTarget.checked)
-              }
-            />
-          </Group>
-        </Group>
+          <DrawingToolbar
+            canUndo={drawings.length > 0}
+            color={drawingColor}
+            drawingModeEnabled={isDrawingModeEnabled}
+            strokeWidth={strokeWidth}
+            tool={tool}
+            onColorChange={setDrawingColor}
+            onDrawingModeChange={handleDrawingModeChange}
+            onStrokeWidthChange={setStrokeWidth}
+            onToolChange={setTool}
+            onUndo={handleUndoLastDrawing}
+          />
+        </Stack>
+
         <AspectRatio ref={containerRef} pos="relative" ratio={16 / 9}>
           <video
             ref={videoRef}
@@ -159,6 +278,12 @@ export function UploadedVideoPlayer({
             controls
             preload="metadata"
             src={videoUrl}
+            onLoadedMetadata={(event) =>
+              onDurationChange?.(event.currentTarget.duration)
+            }
+            onTimeUpdate={(event) =>
+              onTimeChange?.(event.currentTarget.currentTime)
+            }
           />
           <Box
             pos="absolute"
@@ -168,29 +293,60 @@ export function UploadedVideoPlayer({
             }}
           >
             <Stage
-              width={containerRect.width}
               height={containerRect.height}
+              width={containerRect.width}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
             >
               <Layer>
-                {lines.map((line, i) => (
-                  <Line
-                    key={i}
-                    points={line.points}
-                    stroke="#df4b26"
-                    strokeWidth={5}
-                    tension={0.5}
-                    lineCap="round"
-                    lineJoin="round"
-                    globalCompositeOperation={
-                      line.tool === "eraser"
-                        ? "destination-out"
-                        : "source-over"
-                    }
-                  />
-                ))}
+                {drawings.map((drawing) => {
+                  if (drawing.type === "freehand") {
+                    return (
+                      <Line
+                        key={drawing.id}
+                        points={drawing.points}
+                        stroke={drawing.color}
+                        strokeWidth={drawing.strokeWidth}
+                        tension={0.5}
+                        lineCap="round"
+                        lineJoin="round"
+                        globalCompositeOperation={
+                          drawing.tool === "eraser"
+                            ? "destination-out"
+                            : "source-over"
+                        }
+                      />
+                    );
+                  }
+
+                  if (drawing.type === "rectangle") {
+                    const rectangle = normalizeRect(drawing);
+
+                    return (
+                      <Rect
+                        key={drawing.id}
+                        height={rectangle.height}
+                        stroke={drawing.color}
+                        strokeWidth={drawing.strokeWidth}
+                        width={rectangle.width}
+                        x={rectangle.x}
+                        y={rectangle.y}
+                      />
+                    );
+                  }
+
+                  return (
+                    <Circle
+                      key={drawing.id}
+                      radius={drawing.radius}
+                      stroke={drawing.color}
+                      strokeWidth={drawing.strokeWidth}
+                      x={drawing.x}
+                      y={drawing.y}
+                    />
+                  );
+                })}
               </Layer>
             </Stage>
           </Box>
