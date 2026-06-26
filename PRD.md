@@ -2,7 +2,7 @@
 
 ## Overview
 
-VODCoach Studio is a gameplay VOD review platform where users upload gameplay footage, create timestamped coaching notes, draw annotations over paused video frames, and generate AI-structured review reports.
+VODCoach Studio is a gameplay VOD review platform where users upload gameplay footage, create coaching notes, draw annotations over paused video frames, and generate AI-structured review reports.
 
 The product does not try to automatically understand raw video in the MVP. AI is used to organize user-created notes into useful coaching feedback.
 
@@ -16,7 +16,7 @@ The product does not try to automatically understand raw video in the MVP. AI is
 6. A Go worker processes the uploaded video.
 7. The worker generates metadata, thumbnail, and preview video.
 8. User opens the review workspace.
-9. User watches the VOD, pauses, writes notes, and draws annotations.
+9. User watches the VOD, pauses, writes timestamped notes, writes general notes, and draws annotations.
 10. User generates an AI coaching report from notes and tags.
 11. User exports the report as Markdown.
 
@@ -118,9 +118,15 @@ Users can:
 * play/pause video
 * see current timestamp
 * create timestamped notes
+* create general notes that apply to the full VOD
 * tag notes
 * draw on paused frames
-* click notes to jump to timestamps
+* click timestamped notes to jump to timestamps
+
+Notes can be either:
+
+* timestamped notes tied to a specific moment in the VOD
+* general notes that summarize broader coaching feedback without a timestamp
 
 ### Drawing Annotations
 
@@ -155,6 +161,7 @@ AI receives:
 * VOD title
 * game
 * timestamped notes
+* general notes
 * tags
 * drawing summaries
 
@@ -203,12 +210,15 @@ AI outputs:
 * id
 * vod_id
 * user_id
+* note_kind
 * timestamp_seconds
 * note_text
 * drawing_json
 * tags
 * created_at
 * updated_at
+
+`note_kind` is either `timestamped` or `general`. For general notes, `timestamp_seconds` and `drawing_json` are null. For timestamped notes, `timestamp_seconds` is required. Drawing JSON is optional and only applies when the note is tied to a video frame.
 
 ### reports
 

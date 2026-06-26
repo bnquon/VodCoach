@@ -1,0 +1,17 @@
+[
+  {
+    "id": "general_note_001",
+    "noteText": "Overall pacing is strongest when you pause before re-peeking instead of immediately taking the next fight.",
+    "tags": ["tempo", "decision-making"]
+  },
+  {
+    "id": "general_note_002",
+    "noteText": "The main review focus should be keeping crosshair placement stable during rotations and transitions.",
+    "tags": ["mechanics", "crosshair-placement"]
+  },
+  {
+    "id": "general_note_003",
+    "noteText": "Team spacing is good enough to create trade opportunities, but avoid stacking too tightly in narrow lanes.",
+    "tags": ["teamplay", "spacing"]
+  }
+]

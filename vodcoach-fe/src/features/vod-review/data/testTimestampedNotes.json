@@ -1,0 +1,38 @@
+[
+  {
+    "id": "note_001",
+    "timestampSeconds": 4,
+    "noteText": "Opening route is clean, but camera check is late before crossing mid.",
+    "tags": ["positioning", "awareness"]
+  },
+  {
+    "id": "note_002",
+    "timestampSeconds": 12,
+    "noteText": "Good pause before re-peeking. Keep this timing when utility is still available.",
+    "tags": ["timing", "decision-making"]
+  },
+  {
+    "id": "note_003",
+    "timestampSeconds": 21,
+    "noteText": "Overcommitted after first contact instead of resetting behind cover.",
+    "tags": ["positioning", "discipline"]
+  },
+  {
+    "id": "note_004",
+    "timestampSeconds": 34,
+    "noteText": "Crosshair placement drifts low during the rotate. Keep it at head height through corners.",
+    "tags": ["mechanics", "crosshair-placement"]
+  },
+  {
+    "id": "note_005",
+    "timestampSeconds": 46,
+    "noteText": "Strong trade setup with teammate, but spacing is slightly too close.",
+    "tags": ["teamplay", "spacing"]
+  },
+  {
+    "id": "note_006",
+    "timestampSeconds": 57,
+    "noteText": "End sequence is rushed. Take the extra second to isolate the final angle.",
+    "tags": ["decision-making", "tempo"]
+  }
+]
