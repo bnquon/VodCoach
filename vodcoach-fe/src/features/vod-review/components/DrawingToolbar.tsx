@@ -17,11 +17,13 @@ type DrawingToolbarProps = {
   canUndo: boolean;
   color: string;
   drawingModeEnabled: boolean;
+  isTheatreMode: boolean;
   strokeWidth: number;
   tool: DrawingTool;
   onColorChange: (color: string) => void;
   onDrawingModeChange: (enabled: boolean) => void;
   onStrokeWidthChange: (strokeWidth: number) => void;
+  onTheatreModeChange: (enabled: boolean) => void;
   onToolChange: (tool: DrawingTool) => void;
   onUndo: () => void;
 };
@@ -30,11 +32,13 @@ export function DrawingToolbar({
   canUndo,
   color,
   drawingModeEnabled,
+  isTheatreMode,
   strokeWidth,
   tool,
   onColorChange,
   onDrawingModeChange,
   onStrokeWidthChange,
+  onTheatreModeChange,
   onToolChange,
   onUndo,
 }: DrawingToolbarProps) {
@@ -91,6 +95,14 @@ export function DrawingToolbar({
         onClick={onUndo}
       >
         Undo
+      </Button>
+
+      <Button
+        size="compact-sm"
+        variant={isTheatreMode ? "filled" : "light"}
+        onClick={() => onTheatreModeChange(!isTheatreMode)}
+      >
+        {isTheatreMode ? "Exit theatre" : "Theatre mode"}
       </Button>
 
       <Switch

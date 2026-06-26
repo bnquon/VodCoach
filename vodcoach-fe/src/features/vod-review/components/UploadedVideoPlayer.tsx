@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AspectRatio, Box, Paper, Stack, Text } from "@mantine/core";
 import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
@@ -12,8 +12,10 @@ import {
 
 type UploadedVideoPlayerProps = {
   file: File;
+  isTheatreMode: boolean;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   onDurationChange?: (durationSeconds: number) => void;
+  onTheatreModeChange: (enabled: boolean) => void;
   onTimeChange?: (currentTimeSeconds: number) => void;
 };
 
@@ -69,6 +71,28 @@ function getDistance(start: Point, end: Point) {
   return Math.hypot(end.x - start.x, end.y - start.y);
 }
 
+function getScaleBase(width: number, height: number) {
+  return Math.max(1, Math.min(width, height));
+}
+
+function normalizePoint(point: Point, width: number, height: number): Point {
+  return {
+    x: point.x / Math.max(1, width),
+    y: point.y / Math.max(1, height),
+  };
+}
+
+function denormalizePoint(point: Point, width: number, height: number): Point {
+  return {
+    x: point.x * width,
+    y: point.y * height,
+  };
+}
+
+function denormalizePoints(points: number[], width: number, height: number) {
+  return points.map((point, index) => (index % 2 === 0 ? point * width : point * height));
+}
+
 function normalizeRect(rectangle: RectangleDrawing): NormalizedRect {
   return {
     x: Math.min(rectangle.x, rectangle.x + rectangle.width),
@@ -89,11 +113,12 @@ function isFreehandTool(
 
 export function UploadedVideoPlayer({
   file,
+  isTheatreMode,
   onDurationChange,
+  onTheatreModeChange,
   onTimeChange,
   videoRef,
 }: UploadedVideoPlayerProps) {
-  const videoUrl = useMemo(() => URL.createObjectURL(file), [file]);
   const [containerRef, containerRect] = useResizeObserver<HTMLDivElement>();
   const [drawings, setDrawings] = useState<DrawingShape[]>([]);
   const [drawingColor, setDrawingColor] = useState("#df4b26");
@@ -109,8 +134,11 @@ export function UploadedVideoPlayer({
 
     isDrawing.current = true;
     const position = event.target.getStage()?.getPointerPosition();
+    const normalizedPosition = position
+      ? normalizePoint(position, containerRect.width, containerRect.height)
+      : null;
 
-    if (!position) {
+    if (!normalizedPosition) {
       return;
     }
 
@@ -121,7 +149,7 @@ export function UploadedVideoPlayer({
           id: createDrawingId(),
           type: "freehand",
           color: drawingColor,
-          points: [position.x, position.y],
+          points: [normalizedPosition.x, normalizedPosition.y],
           strokeWidth,
           tool,
         },
@@ -140,8 +168,8 @@ export function UploadedVideoPlayer({
           height: 0,
           strokeWidth,
           width: 0,
-          x: position.x,
-          y: position.y,
+          x: normalizedPosition.x,
+          y: normalizedPosition.y,
         },
       ]);
 
@@ -156,8 +184,8 @@ export function UploadedVideoPlayer({
         color: drawingColor,
         radius: 0,
         strokeWidth,
-        x: position.x,
-        y: position.y,
+        x: normalizedPosition.x,
+        y: normalizedPosition.y,
       },
     ]);
   }
@@ -169,8 +197,11 @@ export function UploadedVideoPlayer({
 
     const stage = event.target.getStage();
     const point = stage?.getPointerPosition();
+    const normalizedPoint = point
+      ? normalizePoint(point, containerRect.width, containerRect.height)
+      : null;
 
-    if (!point) {
+    if (!point || !normalizedPoint) {
       return;
     }
 
@@ -185,28 +216,40 @@ export function UploadedVideoPlayer({
         return [
           ...currentDrawings.slice(0, -1),
           {
-            ...lastDrawing,
-            points: [...lastDrawing.points, point.x, point.y],
-          },
-        ];
+          ...lastDrawing,
+          points: [
+            ...lastDrawing.points,
+            normalizedPoint.x,
+            normalizedPoint.y,
+          ],
+        },
+      ];
       }
 
       if (lastDrawing.type === "rectangle") {
         return [
           ...currentDrawings.slice(0, -1),
           {
-            ...lastDrawing,
-            width: point.x - lastDrawing.x,
-            height: point.y - lastDrawing.y,
-          },
-        ];
+          ...lastDrawing,
+          width: normalizedPoint.x - lastDrawing.x,
+          height: normalizedPoint.y - lastDrawing.y,
+        },
+      ];
       }
 
       return [
         ...currentDrawings.slice(0, -1),
         {
           ...lastDrawing,
-          radius: getDistance(lastDrawing, point),
+          radius:
+            getDistance(
+              denormalizePoint(
+                lastDrawing,
+                containerRect.width,
+                containerRect.height,
+              ),
+              point,
+            ) / getScaleBase(containerRect.width, containerRect.height),
         },
       ];
     });
@@ -247,10 +290,22 @@ export function UploadedVideoPlayer({
   }, []);
 
   useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+    video.load();
+
     return () => {
-      URL.revokeObjectURL(videoUrl);
+      video.removeAttribute("src");
+      video.load();
+      URL.revokeObjectURL(objectUrl);
     };
-  }, [videoUrl]);
+  }, [file, videoRef]);
 
   return (
     <Paper withBorder p="md" radius="md">
@@ -261,11 +316,13 @@ export function UploadedVideoPlayer({
             canUndo={drawings.length > 0}
             color={drawingColor}
             drawingModeEnabled={isDrawingModeEnabled}
+            isTheatreMode={isTheatreMode}
             strokeWidth={strokeWidth}
             tool={tool}
             onColorChange={setDrawingColor}
             onDrawingModeChange={handleDrawingModeChange}
             onStrokeWidthChange={setStrokeWidth}
+            onTheatreModeChange={onTheatreModeChange}
             onToolChange={setTool}
             onUndo={handleUndoLastDrawing}
           />
@@ -277,7 +334,6 @@ export function UploadedVideoPlayer({
             disablePictureInPicture
             controls
             preload="metadata"
-            src={videoUrl}
             onLoadedMetadata={(event) =>
               onDurationChange?.(event.currentTarget.duration)
             }
@@ -305,7 +361,11 @@ export function UploadedVideoPlayer({
                     return (
                       <Line
                         key={drawing.id}
-                        points={drawing.points}
+                        points={denormalizePoints(
+                          drawing.points,
+                          containerRect.width,
+                          containerRect.height,
+                        )}
                         stroke={drawing.color}
                         strokeWidth={drawing.strokeWidth}
                         tension={0.5}
@@ -326,12 +386,12 @@ export function UploadedVideoPlayer({
                     return (
                       <Rect
                         key={drawing.id}
-                        height={rectangle.height}
+                        height={rectangle.height * containerRect.height}
                         stroke={drawing.color}
                         strokeWidth={drawing.strokeWidth}
-                        width={rectangle.width}
-                        x={rectangle.x}
-                        y={rectangle.y}
+                        width={rectangle.width * containerRect.width}
+                        x={rectangle.x * containerRect.width}
+                        y={rectangle.y * containerRect.height}
                       />
                     );
                   }
@@ -339,11 +399,14 @@ export function UploadedVideoPlayer({
                   return (
                     <Circle
                       key={drawing.id}
-                      radius={drawing.radius}
+                      radius={
+                        drawing.radius *
+                        getScaleBase(containerRect.width, containerRect.height)
+                      }
                       stroke={drawing.color}
                       strokeWidth={drawing.strokeWidth}
-                      x={drawing.x}
-                      y={drawing.y}
+                      x={drawing.x * containerRect.width}
+                      y={drawing.y * containerRect.height}
                     />
                   );
                 })}
