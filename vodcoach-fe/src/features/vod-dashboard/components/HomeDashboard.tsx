@@ -18,14 +18,24 @@ import { VodCard } from "./VodCard";
 
 const recentVods = [
   { id: "match-1", title: "Match 1", game: "Valorant", status: "Ready" },
-  { id: "match-2", title: "Match 2", game: "Apex Legends", status: "Processing" },
+  {
+    id: "match-2",
+    title: "Match 2",
+    game: "Apex Legends",
+    status: "Processing",
+  },
   { id: "match-3", title: "Match 3", game: "Overwatch 2", status: "Failed" },
 ] as const;
 
 const allVods = [
   ...recentVods,
   { id: "match-4", title: "Ranked Review", game: "Valorant", status: "Ready" },
-  { id: "match-5", title: "Scrim Set", game: "Counter-Strike 2", status: "Processing" },
+  {
+    id: "match-5",
+    title: "Scrim Set",
+    game: "Counter-Strike 2",
+    status: "Processing",
+  },
   { id: "match-6", title: "Endgame Review", game: "Fortnite", status: "Ready" },
 ] as const;
 
@@ -42,7 +52,12 @@ export function HomeDashboard() {
               <Text size="sm" c="dimmed">
                 Brandon
               </Text>
-              <Button component={Link} href="/login" size="compact-sm" variant="subtle">
+              <Button
+                component={Link}
+                href="/login"
+                size="compact-sm"
+                variant="subtle"
+              >
                 Login
               </Button>
             </Group>

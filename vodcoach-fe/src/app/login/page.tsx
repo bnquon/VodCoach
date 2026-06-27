@@ -1,4 +1,12 @@
-import { Button, Container, Paper, PasswordInput, Stack, TextInput, Title } from "@mantine/core";
+import {
+  Button,
+  Container,
+  Paper,
+  PasswordInput,
+  Stack,
+  TextInput,
+  Title,
+} from "@mantine/core";
 
 export default function LoginPage() {
   return (

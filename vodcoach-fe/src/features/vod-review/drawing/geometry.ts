@@ -8,7 +8,11 @@ export function getScaleBase(width: number, height: number) {
   return Math.max(1, Math.min(width, height));
 }
 
-export function normalizePoint(point: Point, width: number, height: number): Point {
+export function normalizePoint(
+  point: Point,
+  width: number,
+  height: number,
+): Point {
   return {
     x: point.x / Math.max(1, width),
     y: point.y / Math.max(1, height),

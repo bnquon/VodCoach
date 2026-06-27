@@ -63,7 +63,9 @@ export function GeneralNotes({ notes }: GeneralNotesProps) {
         <Button
           size="compact-xs"
           variant={isAddingNote ? "default" : "light"}
-          onClick={isAddingNote ? handleCancelAddNote : () => setIsAddingNote(true)}
+          onClick={
+            isAddingNote ? handleCancelAddNote : () => setIsAddingNote(true)
+          }
         >
           {isAddingNote ? "Cancel" : "+ Add note"}
         </Button>

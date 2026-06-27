@@ -18,10 +18,7 @@ import {
   type DrawingAnnotation,
   type DrawingShape,
 } from "../drawing/types";
-import {
-  DrawingToolbar,
-  type DrawingTool,
-} from "./DrawingToolbar";
+import { DrawingToolbar, type DrawingTool } from "./DrawingToolbar";
 
 type UploadedVideoPlayerProps = {
   isTheatreMode: boolean;
@@ -47,7 +44,10 @@ function getCurrentVideoTime(video: HTMLVideoElement | null) {
   return video ? Math.floor(video.currentTime) : 0;
 }
 
-function isAnnotationVisible(annotation: DrawingAnnotation, currentTime: number) {
+function isAnnotationVisible(
+  annotation: DrawingAnnotation,
+  currentTime: number,
+) {
   return (
     currentTime >= annotation.timestampSeconds &&
     currentTime <= annotation.timestampSeconds + annotation.durationSeconds
@@ -141,7 +141,7 @@ export function UploadedVideoPlayer({
         drawingJson: [drawingShape],
       },
     ]);
-    console.log(drawingAnnotations)
+    console.log(drawingAnnotations);
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {

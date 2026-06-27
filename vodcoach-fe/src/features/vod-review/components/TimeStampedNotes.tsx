@@ -123,7 +123,9 @@ export function TimeStampedNotes({
           <Stack gap="xs">
             <NumberInput
               label="Timestamp"
-              max={durationSeconds > 0 ? Math.floor(durationSeconds) : undefined}
+              max={
+                durationSeconds > 0 ? Math.floor(durationSeconds) : undefined
+              }
               min={0}
               size="xs"
               suffix=" sec"

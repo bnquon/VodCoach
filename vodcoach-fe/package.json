@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint-staged": "lint-staged",
+    "prepare": "cd .. && husky"
   },
   "dependencies": {
     "@mantine/core": "^9.4.0",
@@ -26,10 +30,16 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "postcss": "^8.5.15",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
+    "prettier": "^3.8.5",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{css,json,md,mjs,ts,tsx}": "prettier --write"
   }
 }

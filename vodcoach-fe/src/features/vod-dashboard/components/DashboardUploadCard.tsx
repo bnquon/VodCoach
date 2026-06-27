@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Group, Paper, Stack, Text, TextInput, Title } from "@mantine/core";
 import {
-  Dropzone,
-  MIME_TYPES,
-  type FileWithPath,
-} from "@mantine/dropzone";
+  Button,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { Dropzone, MIME_TYPES, type FileWithPath } from "@mantine/dropzone";
 
 export function DashboardUploadCard() {
   const [selectedFile, setSelectedFile] = useState<FileWithPath | null>(null);
