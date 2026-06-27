@@ -6,100 +6,35 @@ import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { Circle, Layer, Line, Rect, Stage } from "react-konva";
 import {
+  denormalizePoint,
+  denormalizePoints,
+  getDistance,
+  getScaleBase,
+  normalizePoint,
+  normalizeRect,
+} from "../drawing/geometry";
+import {
+  DEFAULT_DRAWING_DURATION_SECONDS,
+  type DrawingAnnotation,
+  type DrawingShape,
+} from "../drawing/types";
+import {
   DrawingToolbar,
   type DrawingTool,
 } from "./DrawingToolbar";
 
 type UploadedVideoPlayerProps = {
-  file: File;
   isTheatreMode: boolean;
+  src: string;
+  title: string;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   onDurationChange?: (durationSeconds: number) => void;
   onTheatreModeChange: (enabled: boolean) => void;
   onTimeChange?: (currentTimeSeconds: number) => void;
 };
 
-type FreehandDrawing = {
-  id: string;
-  type: "freehand";
-  color: string;
-  points: number[];
-  strokeWidth: number;
-  tool: Extract<DrawingTool, "pen" | "eraser">;
-};
-
-type RectangleDrawing = {
-  id: string;
-  type: "rectangle";
-  color: string;
-  height: number;
-  strokeWidth: number;
-  width: number;
-  x: number;
-  y: number;
-};
-
-type CircleDrawing = {
-  id: string;
-  type: "circle";
-  color: string;
-  radius: number;
-  strokeWidth: number;
-  x: number;
-  y: number;
-};
-
-type DrawingShape = FreehandDrawing | RectangleDrawing | CircleDrawing;
-
-type Point = {
-  x: number;
-  y: number;
-};
-
-type NormalizedRect = {
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-};
-
 function createDrawingId() {
   return crypto.randomUUID();
-}
-
-function getDistance(start: Point, end: Point) {
-  return Math.hypot(end.x - start.x, end.y - start.y);
-}
-
-function getScaleBase(width: number, height: number) {
-  return Math.max(1, Math.min(width, height));
-}
-
-function normalizePoint(point: Point, width: number, height: number): Point {
-  return {
-    x: point.x / Math.max(1, width),
-    y: point.y / Math.max(1, height),
-  };
-}
-
-function denormalizePoint(point: Point, width: number, height: number): Point {
-  return {
-    x: point.x * width,
-    y: point.y * height,
-  };
-}
-
-function denormalizePoints(points: number[], width: number, height: number) {
-  return points.map((point, index) => (index % 2 === 0 ? point * width : point * height));
-}
-
-function normalizeRect(rectangle: RectangleDrawing): NormalizedRect {
-  return {
-    x: Math.min(rectangle.x, rectangle.x + rectangle.width),
-    y: Math.min(rectangle.y, rectangle.y + rectangle.height),
-    width: Math.abs(rectangle.width),
-    height: Math.abs(rectangle.height),
-  };
 }
 
 function isFreehandTool(
@@ -108,24 +43,41 @@ function isFreehandTool(
   return tool === "pen" || tool === "eraser";
 }
 
-// TODO: Associate drawings with a video timestamp and a duration in seconds
-// TODO: Decouple the drawing logic and types from this file to another file
+function getCurrentVideoTime(video: HTMLVideoElement | null) {
+  return video ? Math.floor(video.currentTime) : 0;
+}
+
+function isAnnotationVisible(annotation: DrawingAnnotation, currentTime: number) {
+  return (
+    currentTime >= annotation.timestampSeconds &&
+    currentTime <= annotation.timestampSeconds + annotation.durationSeconds
+  );
+}
 
 export function UploadedVideoPlayer({
-  file,
   isTheatreMode,
   onDurationChange,
   onTheatreModeChange,
   onTimeChange,
+  src,
+  title,
   videoRef,
 }: UploadedVideoPlayerProps) {
   const [containerRef, containerRect] = useResizeObserver<HTMLDivElement>();
-  const [drawings, setDrawings] = useState<DrawingShape[]>([]);
+  const [drawingAnnotations, setDrawingAnnotations] = useState<
+    DrawingAnnotation[]
+  >([]);
   const [drawingColor, setDrawingColor] = useState("#df4b26");
   const [isDrawingModeEnabled, setIsDrawingModeEnabled] = useState(false);
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [tool, setTool] = useState<DrawingTool>("pen");
+  const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
+  const activeAnnotationId = useRef<string | null>(null);
   const isDrawing = useRef(false);
+
+  const visibleAnnotations = drawingAnnotations.filter((annotation) =>
+    isAnnotationVisible(annotation, currentTimeSeconds),
+  );
 
   function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
     if (!isDrawingModeEnabled) {
@@ -142,52 +94,54 @@ export function UploadedVideoPlayer({
       return;
     }
 
+    const shapeId = createDrawingId();
+    const annotationId = createDrawingId();
+    activeAnnotationId.current = annotationId;
+
+    let drawingShape: DrawingShape;
+
     if (isFreehandTool(tool)) {
-      setDrawings((currentDrawings) => [
-        ...currentDrawings,
-        {
-          id: createDrawingId(),
-          type: "freehand",
-          color: drawingColor,
-          points: [normalizedPosition.x, normalizedPosition.y],
-          strokeWidth,
-          tool,
-        },
-      ]);
-
-      return;
-    }
-
-    if (tool === "rectangle") {
-      setDrawings((currentDrawings) => [
-        ...currentDrawings,
-        {
-          id: createDrawingId(),
-          type: "rectangle",
-          color: drawingColor,
-          height: 0,
-          strokeWidth,
-          width: 0,
-          x: normalizedPosition.x,
-          y: normalizedPosition.y,
-        },
-      ]);
-
-      return;
-    }
-
-    setDrawings((currentDrawings) => [
-      ...currentDrawings,
-      {
-        id: createDrawingId(),
+      drawingShape = {
+        id: shapeId,
+        type: "freehand",
+        color: drawingColor,
+        points: [normalizedPosition.x, normalizedPosition.y],
+        strokeWidth,
+        tool,
+      };
+    } else if (tool === "rectangle") {
+      drawingShape = {
+        id: shapeId,
+        type: "rectangle",
+        color: drawingColor,
+        height: 0,
+        strokeWidth,
+        width: 0,
+        x: normalizedPosition.x,
+        y: normalizedPosition.y,
+      };
+    } else {
+      drawingShape = {
+        id: shapeId,
         type: "circle",
         color: drawingColor,
         radius: 0,
         strokeWidth,
         x: normalizedPosition.x,
         y: normalizedPosition.y,
+      };
+    }
+
+    setDrawingAnnotations((currentAnnotations) => [
+      ...currentAnnotations,
+      {
+        id: annotationId,
+        timestampSeconds: getCurrentVideoTime(videoRef.current),
+        durationSeconds: DEFAULT_DRAWING_DURATION_SECONDS,
+        drawingJson: [drawingShape],
       },
     ]);
+    console.log(drawingAnnotations)
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {
@@ -201,72 +155,94 @@ export function UploadedVideoPlayer({
       ? normalizePoint(point, containerRect.width, containerRect.height)
       : null;
 
-    if (!point || !normalizedPoint) {
+    if (!point || !normalizedPoint || !activeAnnotationId.current) {
       return;
     }
 
-    setDrawings((currentDrawings) => {
-      const lastDrawing = currentDrawings.at(-1);
+    setDrawingAnnotations((currentAnnotations) =>
+      currentAnnotations.map((annotation) => {
+        if (annotation.id !== activeAnnotationId.current) {
+          return annotation;
+        }
 
-      if (!lastDrawing) {
-        return currentDrawings;
-      }
+        const [drawing] = annotation.drawingJson;
 
-      if (lastDrawing.type === "freehand") {
-        return [
-          ...currentDrawings.slice(0, -1),
-          {
-          ...lastDrawing,
-          points: [
-            ...lastDrawing.points,
-            normalizedPoint.x,
-            normalizedPoint.y,
+        if (!drawing) {
+          return annotation;
+        }
+
+        if (drawing.type === "freehand") {
+          return {
+            ...annotation,
+            drawingJson: [
+              {
+                ...drawing,
+                points: [
+                  ...drawing.points,
+                  normalizedPoint.x,
+                  normalizedPoint.y,
+                ],
+              },
+            ],
+          };
+        }
+
+        if (drawing.type === "rectangle") {
+          return {
+            ...annotation,
+            drawingJson: [
+              {
+                ...drawing,
+                width: normalizedPoint.x - drawing.x,
+                height: normalizedPoint.y - drawing.y,
+              },
+            ],
+          };
+        }
+
+        return {
+          ...annotation,
+          drawingJson: [
+            {
+              ...drawing,
+              radius:
+                getDistance(
+                  denormalizePoint(
+                    drawing,
+                    containerRect.width,
+                    containerRect.height,
+                  ),
+                  point,
+                ) / getScaleBase(containerRect.width, containerRect.height),
+            },
           ],
-        },
-      ];
-      }
-
-      if (lastDrawing.type === "rectangle") {
-        return [
-          ...currentDrawings.slice(0, -1),
-          {
-          ...lastDrawing,
-          width: normalizedPoint.x - lastDrawing.x,
-          height: normalizedPoint.y - lastDrawing.y,
-        },
-      ];
-      }
-
-      return [
-        ...currentDrawings.slice(0, -1),
-        {
-          ...lastDrawing,
-          radius:
-            getDistance(
-              denormalizePoint(
-                lastDrawing,
-                containerRect.width,
-                containerRect.height,
-              ),
-              point,
-            ) / getScaleBase(containerRect.width, containerRect.height),
-        },
-      ];
-    });
+        };
+      }),
+    );
   }
 
   function handleMouseUp() {
     isDrawing.current = false;
+    activeAnnotationId.current = null;
   }
 
   function handleDrawingModeChange(checked: boolean) {
     setIsDrawingModeEnabled(checked);
     isDrawing.current = false;
+    activeAnnotationId.current = null;
   }
 
   function handleUndoLastDrawing() {
     isDrawing.current = false;
-    setDrawings((currentDrawings) => currentDrawings.slice(0, -1));
+    activeAnnotationId.current = null;
+    setDrawingAnnotations((currentAnnotations) =>
+      currentAnnotations.slice(0, -1),
+    );
+  }
+
+  function handleTimeUpdate(video: HTMLVideoElement) {
+    setCurrentTimeSeconds(video.currentTime);
+    onTimeChange?.(video.currentTime);
   }
 
   useEffect(() => {
@@ -296,24 +272,22 @@ export function UploadedVideoPlayer({
       return;
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    video.src = objectUrl;
+    video.src = src;
     video.load();
 
     return () => {
       video.removeAttribute("src");
       video.load();
-      URL.revokeObjectURL(objectUrl);
     };
-  }, [file, videoRef]);
+  }, [src, videoRef]);
 
   return (
     <Paper withBorder p="md" radius="md">
       <Stack gap="sm">
         <Stack gap="sm">
-          <Text fw={600}>{file.name}</Text>
+          <Text fw={600}>{title}</Text>
           <DrawingToolbar
-            canUndo={drawings.length > 0}
+            canUndo={drawingAnnotations.length > 0}
             color={drawingColor}
             drawingModeEnabled={isDrawingModeEnabled}
             isTheatreMode={isTheatreMode}
@@ -337,9 +311,7 @@ export function UploadedVideoPlayer({
             onLoadedMetadata={(event) =>
               onDurationChange?.(event.currentTarget.duration)
             }
-            onTimeUpdate={(event) =>
-              onTimeChange?.(event.currentTarget.currentTime)
-            }
+            onTimeUpdate={(event) => handleTimeUpdate(event.currentTarget)}
           />
           <Box
             pos="absolute"
@@ -356,60 +328,65 @@ export function UploadedVideoPlayer({
               onMouseUp={handleMouseUp}
             >
               <Layer>
-                {drawings.map((drawing) => {
-                  if (drawing.type === "freehand") {
+                {visibleAnnotations.flatMap((annotation) =>
+                  annotation.drawingJson.map((drawing) => {
+                    if (drawing.type === "freehand") {
+                      return (
+                        <Line
+                          key={drawing.id}
+                          points={denormalizePoints(
+                            drawing.points,
+                            containerRect.width,
+                            containerRect.height,
+                          )}
+                          stroke={drawing.color}
+                          strokeWidth={drawing.strokeWidth}
+                          tension={0.5}
+                          lineCap="round"
+                          lineJoin="round"
+                          globalCompositeOperation={
+                            drawing.tool === "eraser"
+                              ? "destination-out"
+                              : "source-over"
+                          }
+                        />
+                      );
+                    }
+
+                    if (drawing.type === "rectangle") {
+                      const rectangle = normalizeRect(drawing);
+
+                      return (
+                        <Rect
+                          key={drawing.id}
+                          height={rectangle.height * containerRect.height}
+                          stroke={drawing.color}
+                          strokeWidth={drawing.strokeWidth}
+                          width={rectangle.width * containerRect.width}
+                          x={rectangle.x * containerRect.width}
+                          y={rectangle.y * containerRect.height}
+                        />
+                      );
+                    }
+
                     return (
-                      <Line
+                      <Circle
                         key={drawing.id}
-                        points={denormalizePoints(
-                          drawing.points,
-                          containerRect.width,
-                          containerRect.height,
-                        )}
-                        stroke={drawing.color}
-                        strokeWidth={drawing.strokeWidth}
-                        tension={0.5}
-                        lineCap="round"
-                        lineJoin="round"
-                        globalCompositeOperation={
-                          drawing.tool === "eraser"
-                            ? "destination-out"
-                            : "source-over"
+                        radius={
+                          drawing.radius *
+                          getScaleBase(
+                            containerRect.width,
+                            containerRect.height,
+                          )
                         }
-                      />
-                    );
-                  }
-
-                  if (drawing.type === "rectangle") {
-                    const rectangle = normalizeRect(drawing);
-
-                    return (
-                      <Rect
-                        key={drawing.id}
-                        height={rectangle.height * containerRect.height}
                         stroke={drawing.color}
                         strokeWidth={drawing.strokeWidth}
-                        width={rectangle.width * containerRect.width}
-                        x={rectangle.x * containerRect.width}
-                        y={rectangle.y * containerRect.height}
+                        x={drawing.x * containerRect.width}
+                        y={drawing.y * containerRect.height}
                       />
                     );
-                  }
-
-                  return (
-                    <Circle
-                      key={drawing.id}
-                      radius={
-                        drawing.radius *
-                        getScaleBase(containerRect.width, containerRect.height)
-                      }
-                      stroke={drawing.color}
-                      strokeWidth={drawing.strokeWidth}
-                      x={drawing.x * containerRect.width}
-                      y={drawing.y * containerRect.height}
-                    />
-                  );
-                })}
+                  }),
+                )}
               </Layer>
             </Stage>
           </Box>

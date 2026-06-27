@@ -160,7 +160,8 @@ export function TimeStampedNotes({
                   <Group justify="space-between" align="flex-start">
                     <Button
                       size="compact-sm"
-                      variant="light"
+                      variant="outline"
+                      color="red"
                       onClick={() => onTimestampClick(note.timestampSeconds)}
                     >
                       {formatTimestamp(note.timestampSeconds)}
