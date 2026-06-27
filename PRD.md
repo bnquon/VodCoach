@@ -195,10 +195,6 @@ AI outputs:
 * duration_seconds
 * width
 * height
-* container
-* video_codec
-* audio_codec
-* bitrate
 * status
 * processing_progress
 * error_message
