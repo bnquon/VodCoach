@@ -28,6 +28,8 @@ Done when:
 
 Do not add backend yet.
 
+Completed: June 26 ✅
+
 ## Phase 2: Backend + Database
 
 Add persistence.
