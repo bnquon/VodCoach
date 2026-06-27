@@ -43,7 +43,7 @@ Build:
 * users table
 * vods table
 * annotations table
-* reports table
+* reports table ❌ SKIPPED FOR NOW
 * basic JWT auth
 * annotation CRUD endpoints
 
