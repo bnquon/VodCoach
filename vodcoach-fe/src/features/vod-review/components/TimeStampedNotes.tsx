@@ -19,6 +19,11 @@ type TimeStampedNotesProps = {
   durationSeconds: number;
   notes: TimestampedNote[];
   onAddNoteStart: () => void;
+  onCreateNote: (note: {
+    noteText: string;
+    tags: string[];
+    timestampSeconds: number;
+  }) => void;
   onTimestampClick: (timestampSeconds: number) => void;
 };
 
@@ -37,11 +42,19 @@ function clampTimestamp(timestampSeconds: number, durationSeconds: number) {
   return Math.min(Math.max(0, timestampSeconds), Math.floor(durationSeconds));
 }
 
+function parseTags(tags: string) {
+  return tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
 export function TimeStampedNotes({
   currentTimeSeconds,
   durationSeconds,
   notes,
   onAddNoteStart,
+  onCreateNote,
   onTimestampClick,
 }: TimeStampedNotesProps) {
   const [isAddingNote, setIsAddingNote] = useState(false);
@@ -50,7 +63,9 @@ export function TimeStampedNotes({
   const [draftTimestampSeconds, setDraftTimestampSeconds] = useState<
     number | string
   >(0);
-  const [localNotes, setLocalNotes] = useState(notes);
+  const sortedNotes = [...notes].sort(
+    (a, b) => a.timestampSeconds - b.timestampSeconds,
+  );
 
   function handleStartAddNote() {
     const timestampSeconds = clampTimestamp(
@@ -82,24 +97,17 @@ export function TimeStampedNotes({
       durationSeconds,
     );
 
-    setLocalNotes((currentNotes) => [
-      ...currentNotes,
-      {
-        id: crypto.randomUUID(),
-        timestampSeconds,
-        noteText: draftNoteText.trim(),
-        tags: draftTags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-      },
-    ]);
+    onCreateNote({
+      timestampSeconds,
+      noteText: draftNoteText.trim(),
+      tags: parseTags(draftTags),
+    });
     handleCancelAddNote();
   }
 
   return (
     <Paper
-      withBorder
+      className="vc-card"
       p="xs"
       radius="md"
       h="100%"
@@ -156,8 +164,13 @@ export function TimeStampedNotes({
           </Stack>
         ) : (
           <Stack gap={6}>
-            {localNotes.map((note) => (
-              <Paper key={note.id} withBorder p="xs" radius="sm">
+            {sortedNotes.map((note) => (
+              <Paper
+                key={note.id}
+                className="vc-elevated-card"
+                p="xs"
+                radius="sm"
+              >
                 <Stack gap={4}>
                   <Group justify="space-between" align="flex-start">
                     <Button

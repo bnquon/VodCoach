@@ -16,9 +16,20 @@ type Drawing struct {
 	VodID            string
 	UserID           string
 	TimestampSeconds int
+	DurationSeconds  int
+	Color            string
 	DrawingJSON      []byte
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+}
+
+type CreateDrawingParams struct {
+	VodID            string
+	UserID           string
+	TimestampSeconds int
+	DurationSeconds  int
+	Color            string
+	DrawingJSON      []byte
 }
 
 func NewDrawingRepository(pool *pgxpool.Pool) *DrawingRepository {
@@ -30,7 +41,7 @@ func NewDrawingRepository(pool *pgxpool.Pool) *DrawingRepository {
 func (r *DrawingRepository) GetDrawingsByVodID(ctx context.Context, vodID string) ([]Drawing, error) {
 	rows, err := r.pool.Query(
 		ctx,
-		`SELECT id, vod_id, user_id, timestamp_seconds, drawing_json, created_at, updated_at
+		`SELECT id, vod_id, user_id, timestamp_seconds, duration_seconds, color, drawing_json, created_at, updated_at
 		FROM drawings
 		WHERE vod_id = $1
 		ORDER BY timestamp_seconds ASC, created_at ASC
@@ -51,6 +62,8 @@ func (r *DrawingRepository) GetDrawingsByVodID(ctx context.Context, vodID string
 			&drawing.VodID,
 			&drawing.UserID,
 			&drawing.TimestampSeconds,
+			&drawing.DurationSeconds,
+			&drawing.Color,
 			&drawing.DrawingJSON,
 			&drawing.CreatedAt,
 			&drawing.UpdatedAt,
@@ -67,4 +80,37 @@ func (r *DrawingRepository) GetDrawingsByVodID(ctx context.Context, vodID string
 	}
 
 	return drawings, nil
+}
+
+func (r *DrawingRepository) CreateDrawing(ctx context.Context, params CreateDrawingParams) (*Drawing, error) {
+	var drawing Drawing
+
+	err := r.pool.QueryRow(
+		ctx,
+		`INSERT INTO drawings (vod_id, user_id, timestamp_seconds, duration_seconds, color, drawing_json)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, vod_id, user_id, timestamp_seconds, duration_seconds, color, drawing_json, created_at, updated_at
+		`,
+		params.VodID,
+		params.UserID,
+		params.TimestampSeconds,
+		params.DurationSeconds,
+		params.Color,
+		params.DrawingJSON,
+	).Scan(
+		&drawing.ID,
+		&drawing.VodID,
+		&drawing.UserID,
+		&drawing.TimestampSeconds,
+		&drawing.DurationSeconds,
+		&drawing.Color,
+		&drawing.DrawingJSON,
+		&drawing.CreatedAt,
+		&drawing.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &drawing, nil
 }

@@ -10,8 +10,7 @@ import {
   Text,
 } from "@mantine/core";
 import { HexColorPicker } from "react-colorful";
-
-export type DrawingTool = "pen" | "rectangle" | "circle" | "eraser";
+import { DRAWING_TOOL, type DrawingTool } from "../drawing/types";
 
 type DrawingToolbarProps = {
   canUndo: boolean;
@@ -46,10 +45,10 @@ export function DrawingToolbar({
     <Group gap="sm">
       <SegmentedControl
         data={[
-          { label: "Pen", value: "pen" },
-          { label: "Rect", value: "rectangle" },
-          { label: "Circle", value: "circle" },
-          { label: "Eraser", value: "eraser" },
+          { label: "Pen", value: DRAWING_TOOL.pen },
+          { label: "Rect", value: DRAWING_TOOL.rectangle },
+          { label: "Circle", value: DRAWING_TOOL.circle },
+          { label: "Eraser", value: DRAWING_TOOL.eraser },
         ]}
         disabled={!drawingModeEnabled}
         size="xs"

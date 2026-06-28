@@ -45,8 +45,8 @@ export default function RegisterPage() {
     <main>
       <Container size={420} py="xl">
         <Paper
+          className="vc-elevated-card"
           component="form"
-          withBorder
           p="lg"
           radius="md"
           onSubmit={handleSubmit}

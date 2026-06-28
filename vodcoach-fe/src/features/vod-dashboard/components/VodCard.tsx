@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, Paper, Stack, Text } from "@mantine/core";
+import { TEST_VOD_ID } from "@/features/vod-review/api";
 
 type VodStatus = "Ready" | "Processing" | "Failed";
 
@@ -16,18 +17,18 @@ const statusColor: Record<VodStatus, string> = {
   Failed: "red",
 };
 
-export function VodCard({ game, id, status, title }: VodCardProps) {
+export function VodCard({ game, status, title }: VodCardProps) {
   return (
     <Paper
+      className="vc-card"
       component={Link}
-      href={`/vods/${id}`}
-      withBorder
+      href={`/vods/${TEST_VOD_ID}`}
       p="sm"
       radius="md"
       style={{ color: "inherit", textDecoration: "none" }}
     >
       <Stack gap="xs">
-        <Paper bg="dark.6" h={96} radius="sm" withBorder>
+        <Paper className="vc-thumbnail" h={96} radius="sm">
           <Stack h="100%" align="center" justify="center" gap={2}>
             <Text size="xs" c="dimmed">
               thumbnail

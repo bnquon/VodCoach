@@ -2,27 +2,35 @@
 
 import { useRef, useState } from "react";
 import { Box, Flex, Stack } from "@mantine/core";
-import testGeneralNotes from "../data/testGeneralNotes.json";
-import testTimestampedNotes from "../data/testTimestampedNotes.json";
-import type { GeneralNote, TimestampedNote } from "../types";
+import { NOTE_KIND } from "../api";
+import { useCreateVodNote, useVodAnnotations, useVodNotes } from "../hooks";
+import {
+  toDrawingAnnotations,
+  toGeneralNotes,
+  toTimestampedNotes,
+} from "../mappers";
 import { GeneralNotes } from "./GeneralNotes";
 import { TimeStampedNotes } from "./TimeStampedNotes";
 import { UploadedVideoPlayer } from "./UploadedVideoPlayer";
 
 interface VodReviewWorkspaceProps {
   videoId?: string;
+  vodTitle: string;
 }
 
-export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
-  // TODO: React query to fetch notes from the backend if videoId is provided meaning it's a processed VOD
+export function VodReviewWorkspace({
+  videoId,
+  vodTitle,
+}: VodReviewWorkspaceProps) {
+  // TODO: Use videoId once the VOD list is backed by the API. For now hooks use the hardcoded test VOD id.
   void videoId;
 
-  const [notes] = useState<TimestampedNote[]>(
-    testTimestampedNotes as TimestampedNote[],
-  );
-  const [generalNotes] = useState<GeneralNote[]>(
-    testGeneralNotes as GeneralNote[],
-  );
+  const { notes: fetchedNotes } = useVodNotes();
+  const { annotations } = useVodAnnotations();
+  const createNote = useCreateVodNote();
+  const notes = toTimestampedNotes(fetchedNotes);
+  const generalNotes = toGeneralNotes(fetchedNotes);
+  const drawingAnnotations = toDrawingAnnotations(annotations.drawings);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [isTheatreMode, setIsTheatreMode] = useState(false);
@@ -43,6 +51,28 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
     videoPlayerRef.current?.pause();
   }
 
+  function handleCreateTimestampedNote(note: {
+    noteText: string;
+    tags: string[];
+    timestampSeconds: number;
+  }) {
+    createNote.mutate({
+      noteKind: NOTE_KIND.timestamped,
+      timestampSeconds: note.timestampSeconds,
+      noteText: note.noteText,
+      tags: note.tags,
+    });
+  }
+
+  function handleCreateGeneralNote(note: { noteText: string; tags: string[] }) {
+    createNote.mutate({
+      noteKind: NOTE_KIND.general,
+      timestampSeconds: null,
+      noteText: note.noteText,
+      tags: note.tags,
+    });
+  }
+
   return (
     <Stack gap="xl">
       <Flex
@@ -58,8 +88,9 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
           w="100%"
         >
           <UploadedVideoPlayer
+            drawingAnnotations={drawingAnnotations}
             src="/TestVod.mp4"
-            title="Sample VOD"
+            title={vodTitle}
             isTheatreMode={isTheatreMode}
             videoRef={videoPlayerRef}
             onDurationChange={setDurationSeconds}
@@ -81,11 +112,15 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
               durationSeconds={durationSeconds}
               notes={notes}
               onAddNoteStart={handleTimestampNoteAddStart}
+              onCreateNote={handleCreateTimestampedNote}
               onTimestampClick={handleTimestampClick}
             />
           </Box>
           <Box flex="1 1 0" mih={isTheatreMode ? 400 : 0} w="100%">
-            <GeneralNotes notes={generalNotes} />
+            <GeneralNotes
+              notes={generalNotes}
+              onCreateNote={handleCreateGeneralNote}
+            />
           </Box>
         </Flex>
       </Flex>

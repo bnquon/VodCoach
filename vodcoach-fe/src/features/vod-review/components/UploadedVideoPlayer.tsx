@@ -14,13 +14,24 @@ import {
   normalizeRect,
 } from "../drawing/geometry";
 import {
+  createDrawingId,
+  getCurrentVideoTime,
+  isAnnotationVisible,
+  isFreehandTool,
+} from "../drawing/helpers";
+import {
   DEFAULT_DRAWING_DURATION_SECONDS,
+  DEFAULT_START_COLOR,
+  DRAWING_SHAPE_TYPE,
+  DRAWING_TOOL,
   type DrawingAnnotation,
   type DrawingShape,
+  type DrawingTool,
 } from "../drawing/types";
-import { DrawingToolbar, type DrawingTool } from "./DrawingToolbar";
+import { DrawingToolbar } from "./DrawingToolbar";
 
 type UploadedVideoPlayerProps = {
+  drawingAnnotations: DrawingAnnotation[];
   isTheatreMode: boolean;
   src: string;
   title: string;
@@ -30,31 +41,8 @@ type UploadedVideoPlayerProps = {
   onTimeChange?: (currentTimeSeconds: number) => void;
 };
 
-function createDrawingId() {
-  return crypto.randomUUID();
-}
-
-function isFreehandTool(
-  tool: DrawingTool,
-): tool is Extract<DrawingTool, "pen" | "eraser"> {
-  return tool === "pen" || tool === "eraser";
-}
-
-function getCurrentVideoTime(video: HTMLVideoElement | null) {
-  return video ? Math.floor(video.currentTime) : 0;
-}
-
-function isAnnotationVisible(
-  annotation: DrawingAnnotation,
-  currentTime: number,
-) {
-  return (
-    currentTime >= annotation.timestampSeconds &&
-    currentTime <= annotation.timestampSeconds + annotation.durationSeconds
-  );
-}
-
 export function UploadedVideoPlayer({
+  drawingAnnotations,
   isTheatreMode,
   onDurationChange,
   onTheatreModeChange,
@@ -64,18 +52,22 @@ export function UploadedVideoPlayer({
   videoRef,
 }: UploadedVideoPlayerProps) {
   const [containerRef, containerRect] = useResizeObserver<HTMLDivElement>();
-  const [drawingAnnotations, setDrawingAnnotations] = useState<
+  const [localDrawingAnnotations, setLocalDrawingAnnotations] = useState<
     DrawingAnnotation[]
   >([]);
-  const [drawingColor, setDrawingColor] = useState("#df4b26");
+  const [drawingColor, setDrawingColor] = useState(DEFAULT_START_COLOR);
   const [isDrawingModeEnabled, setIsDrawingModeEnabled] = useState(false);
   const [strokeWidth, setStrokeWidth] = useState(5);
-  const [tool, setTool] = useState<DrawingTool>("pen");
+  const [tool, setTool] = useState<DrawingTool>(DRAWING_TOOL.pen);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
   const activeAnnotationId = useRef<string | null>(null);
   const isDrawing = useRef(false);
 
-  const visibleAnnotations = drawingAnnotations.filter((annotation) =>
+  const allDrawingAnnotations = [
+    ...drawingAnnotations,
+    ...localDrawingAnnotations,
+  ];
+  const visibleAnnotations = allDrawingAnnotations.filter((annotation) =>
     isAnnotationVisible(annotation, currentTimeSeconds),
   );
 
@@ -103,16 +95,16 @@ export function UploadedVideoPlayer({
     if (isFreehandTool(tool)) {
       drawingShape = {
         id: shapeId,
-        type: "freehand",
+        type: DRAWING_SHAPE_TYPE.freehand,
         color: drawingColor,
         points: [normalizedPosition.x, normalizedPosition.y],
         strokeWidth,
         tool,
       };
-    } else if (tool === "rectangle") {
+    } else if (tool === DRAWING_TOOL.rectangle) {
       drawingShape = {
         id: shapeId,
-        type: "rectangle",
+        type: DRAWING_SHAPE_TYPE.rectangle,
         color: drawingColor,
         height: 0,
         strokeWidth,
@@ -123,7 +115,7 @@ export function UploadedVideoPlayer({
     } else {
       drawingShape = {
         id: shapeId,
-        type: "circle",
+        type: DRAWING_SHAPE_TYPE.circle,
         color: drawingColor,
         radius: 0,
         strokeWidth,
@@ -132,7 +124,7 @@ export function UploadedVideoPlayer({
       };
     }
 
-    setDrawingAnnotations((currentAnnotations) => [
+    setLocalDrawingAnnotations((currentAnnotations) => [
       ...currentAnnotations,
       {
         id: annotationId,
@@ -141,7 +133,6 @@ export function UploadedVideoPlayer({
         drawingJson: [drawingShape],
       },
     ]);
-    console.log(drawingAnnotations);
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {
@@ -159,7 +150,7 @@ export function UploadedVideoPlayer({
       return;
     }
 
-    setDrawingAnnotations((currentAnnotations) =>
+    setLocalDrawingAnnotations((currentAnnotations) =>
       currentAnnotations.map((annotation) => {
         if (annotation.id !== activeAnnotationId.current) {
           return annotation;
@@ -171,7 +162,7 @@ export function UploadedVideoPlayer({
           return annotation;
         }
 
-        if (drawing.type === "freehand") {
+        if (drawing.type === DRAWING_SHAPE_TYPE.freehand) {
           return {
             ...annotation,
             drawingJson: [
@@ -187,7 +178,7 @@ export function UploadedVideoPlayer({
           };
         }
 
-        if (drawing.type === "rectangle") {
+        if (drawing.type === DRAWING_SHAPE_TYPE.rectangle) {
           return {
             ...annotation,
             drawingJson: [
@@ -235,7 +226,7 @@ export function UploadedVideoPlayer({
   function handleUndoLastDrawing() {
     isDrawing.current = false;
     activeAnnotationId.current = null;
-    setDrawingAnnotations((currentAnnotations) =>
+    setLocalDrawingAnnotations((currentAnnotations) =>
       currentAnnotations.slice(0, -1),
     );
   }
@@ -282,12 +273,12 @@ export function UploadedVideoPlayer({
   }, [src, videoRef]);
 
   return (
-    <Paper withBorder p="md" radius="md">
+    <Paper className="vc-elevated-card" p="md" radius="md">
       <Stack gap="sm">
         <Stack gap="sm">
           <Text fw={600}>{title}</Text>
           <DrawingToolbar
-            canUndo={drawingAnnotations.length > 0}
+            canUndo={localDrawingAnnotations.length > 0}
             color={drawingColor}
             drawingModeEnabled={isDrawingModeEnabled}
             isTheatreMode={isTheatreMode}
@@ -330,7 +321,7 @@ export function UploadedVideoPlayer({
               <Layer>
                 {visibleAnnotations.flatMap((annotation) =>
                   annotation.drawingJson.map((drawing) => {
-                    if (drawing.type === "freehand") {
+                    if (drawing.type === DRAWING_SHAPE_TYPE.freehand) {
                       return (
                         <Line
                           key={drawing.id}
@@ -345,7 +336,7 @@ export function UploadedVideoPlayer({
                           lineCap="round"
                           lineJoin="round"
                           globalCompositeOperation={
-                            drawing.tool === "eraser"
+                            drawing.tool === DRAWING_TOOL.eraser
                               ? "destination-out"
                               : "source-over"
                           }
@@ -353,7 +344,7 @@ export function UploadedVideoPlayer({
                       );
                     }
 
-                    if (drawing.type === "rectangle") {
+                    if (drawing.type === DRAWING_SHAPE_TYPE.rectangle) {
                       const rectangle = normalizeRect(drawing);
 
                       return (

@@ -15,13 +15,20 @@ import type { GeneralNote } from "../types";
 
 type GeneralNotesProps = {
   notes: GeneralNote[];
+  onCreateNote: (note: { noteText: string; tags: string[] }) => void;
 };
 
-export function GeneralNotes({ notes }: GeneralNotesProps) {
+function parseTags(tags: string) {
+  return tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+export function GeneralNotes({ notes, onCreateNote }: GeneralNotesProps) {
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [draftNoteText, setDraftNoteText] = useState("");
   const [draftTags, setDraftTags] = useState("");
-  const [localNotes, setLocalNotes] = useState(notes);
 
   function handleCancelAddNote() {
     setIsAddingNote(false);
@@ -34,23 +41,16 @@ export function GeneralNotes({ notes }: GeneralNotesProps) {
       return;
     }
 
-    setLocalNotes((currentNotes) => [
-      ...currentNotes,
-      {
-        id: crypto.randomUUID(),
-        noteText: draftNoteText.trim(),
-        tags: draftTags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-      },
-    ]);
+    onCreateNote({
+      noteText: draftNoteText.trim(),
+      tags: parseTags(draftTags),
+    });
     handleCancelAddNote();
   }
 
   return (
     <Paper
-      withBorder
+      className="vc-card"
       p="xs"
       radius="md"
       h="100%"
@@ -98,8 +98,13 @@ export function GeneralNotes({ notes }: GeneralNotesProps) {
           </Stack>
         ) : (
           <Stack gap={6}>
-            {localNotes.map((note) => (
-              <Paper key={note.id} withBorder p="xs" radius="sm">
+            {notes.map((note) => (
+              <Paper
+                key={note.id}
+                className="vc-elevated-card"
+                p="xs"
+                radius="sm"
+              >
                 <Stack gap={4}>
                   <Group gap={4}>
                     {note.tags.map((tag) => (

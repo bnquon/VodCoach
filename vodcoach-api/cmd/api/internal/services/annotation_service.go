@@ -9,6 +9,7 @@ import (
 type AnnotationService struct {
 	noteRepository    *repository.NoteRepository
 	drawingRepository *repository.DrawingRepository
+	vodRepository     *repository.VodRepository
 }
 
 type Annotations struct {
@@ -16,14 +17,19 @@ type Annotations struct {
 	Drawings []repository.Drawing
 }
 
-func NewAnnotationService(noteRepository *repository.NoteRepository, drawingRepository *repository.DrawingRepository) *AnnotationService {
+func NewAnnotationService(noteRepository *repository.NoteRepository, drawingRepository *repository.DrawingRepository, vodRepository *repository.VodRepository) *AnnotationService {
 	return &AnnotationService{
 		noteRepository:    noteRepository,
 		drawingRepository: drawingRepository,
+		vodRepository:     vodRepository,
 	}
 }
 
-func (s *AnnotationService) GetAnnotations(ctx context.Context, vodID string) (*Annotations, error) {
+func (s *AnnotationService) GetAnnotations(ctx context.Context, vodID string, userID string) (*Annotations, error) {
+	if err := s.requireVodOwner(ctx, vodID, userID); err != nil {
+		return nil, err
+	}
+
 	notes, err := s.noteRepository.GetNotesByVodID(ctx, vodID)
 	if err != nil {
 		return nil, err
@@ -38,4 +44,24 @@ func (s *AnnotationService) GetAnnotations(ctx context.Context, vodID string) (*
 		Notes:    notes,
 		Drawings: drawings,
 	}, nil
+}
+
+func (s *AnnotationService) CreateDrawing(ctx context.Context, params repository.CreateDrawingParams) (*repository.Drawing, error) {
+	if err := s.requireVodOwner(ctx, params.VodID, params.UserID); err != nil {
+		return nil, err
+	}
+
+	return s.drawingRepository.CreateDrawing(ctx, params)
+}
+
+func (s *AnnotationService) requireVodOwner(ctx context.Context, vodID string, userID string) error {
+	ownsVod, err := s.vodRepository.UserOwnsVod(ctx, vodID, userID)
+	if err != nil {
+		return err
+	}
+	if !ownsVod {
+		return ErrVodAccessDenied
+	}
+
+	return nil
 }

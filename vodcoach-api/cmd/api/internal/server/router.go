@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	authmiddleware "github.com/bnquon/vodcoach-api/cmd/api/internal/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/health"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/notes"
@@ -22,10 +23,11 @@ func NewRouter(pool *pgxpool.Pool) *gin.Engine {
 	userRepository := repository.NewUserRepository(pool)
 	noteRepository := repository.NewNoteRepository(pool)
 	drawingRepository := repository.NewDrawingRepository(pool)
+	vodRepository := repository.NewVodRepository(pool)
 
 	authService := services.NewAuthService(userRepository)
-	noteService := services.NewNoteService(noteRepository)
-	annotationService := services.NewAnnotationService(noteRepository, drawingRepository)
+	noteService := services.NewNoteService(noteRepository, vodRepository)
+	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
 
 	registerHandler := auth.NewRegisterHandler(authService)
 	loginHandler := auth.NewLoginHandler(authService)
@@ -37,8 +39,13 @@ func NewRouter(pool *pgxpool.Pool) *gin.Engine {
 
 	router.POST("/register", registerHandler.Register)
 	router.POST("/login", loginHandler.Login)
-	router.GET("/vods/:vodID/notes", noteHandler.GetNotes)
-	router.GET("/vods/:vodID/annotations", annotationHandler.GetAnnotations)
+
+	protected := router.Group("/")
+	protected.Use(authmiddleware.Middleware())
+	protected.GET("/vods/:vodID/notes", noteHandler.GetNotes)
+	protected.POST("/vods/:vodID/notes", noteHandler.CreateNote)
+	protected.GET("/vods/:vodID/annotations", annotationHandler.GetAnnotations)
+	protected.POST("/vods/:vodID/annotations", annotationHandler.CreateAnnotation)
 
 	return router
 }
