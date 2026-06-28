@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type UsersRepository struct {
+type UserRepository struct {
 	pool *pgxpool.Pool
 }
 
@@ -16,11 +16,11 @@ type User struct {
 	PasswordHash string
 }
 
-func NewUsersRepository(pool *pgxpool.Pool) *UsersRepository {
-	return &UsersRepository{pool: pool}
+func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
+	return &UserRepository{pool: pool}
 }
 
-func (r *UsersRepository) CreateUser(ctx context.Context, email string, hashedPassword string) (string, error) {
+func (r *UserRepository) CreateUser(ctx context.Context, email string, hashedPassword string) (string, error) {
 	var id string
 
 	err := r.pool.QueryRow(
@@ -41,7 +41,7 @@ func (r *UsersRepository) CreateUser(ctx context.Context, email string, hashedPa
 	return id, nil
 }
 
-func (r *UsersRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
+func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
 
 	err := r.pool.QueryRow(

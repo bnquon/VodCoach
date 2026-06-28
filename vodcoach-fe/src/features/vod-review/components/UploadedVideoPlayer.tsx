@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AspectRatio, Box, Paper, Stack, Text } from "@mantine/core";
 import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
@@ -14,49 +14,41 @@ import {
   normalizeRect,
 } from "../drawing/geometry";
 import {
+  createDrawingId,
+  getCurrentVideoTime,
+  isAnnotationVisible,
+  isFreehandTool,
+} from "../drawing/helpers";
+import {
   DEFAULT_DRAWING_DURATION_SECONDS,
+  DEFAULT_START_COLOR,
+  DRAWING_SHAPE_TYPE,
+  DRAWING_TOOL,
   type DrawingAnnotation,
   type DrawingShape,
+  type DrawingTool,
 } from "../drawing/types";
-import { DrawingToolbar, type DrawingTool } from "./DrawingToolbar";
+import { DrawingToolbar } from "./DrawingToolbar";
 
 type UploadedVideoPlayerProps = {
+  drawingAnnotations: DrawingAnnotation[];
   isTheatreMode: boolean;
   src: string;
   title: string;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   onDurationChange?: (durationSeconds: number) => void;
+  onSaveDrawingAnnotations: (
+    drawingAnnotations: DrawingAnnotation[],
+  ) => Promise<void>;
   onTheatreModeChange: (enabled: boolean) => void;
   onTimeChange?: (currentTimeSeconds: number) => void;
 };
 
-function createDrawingId() {
-  return crypto.randomUUID();
-}
-
-function isFreehandTool(
-  tool: DrawingTool,
-): tool is Extract<DrawingTool, "pen" | "eraser"> {
-  return tool === "pen" || tool === "eraser";
-}
-
-function getCurrentVideoTime(video: HTMLVideoElement | null) {
-  return video ? Math.floor(video.currentTime) : 0;
-}
-
-function isAnnotationVisible(
-  annotation: DrawingAnnotation,
-  currentTime: number,
-) {
-  return (
-    currentTime >= annotation.timestampSeconds &&
-    currentTime <= annotation.timestampSeconds + annotation.durationSeconds
-  );
-}
-
 export function UploadedVideoPlayer({
+  drawingAnnotations,
   isTheatreMode,
   onDurationChange,
+  onSaveDrawingAnnotations,
   onTheatreModeChange,
   onTimeChange,
   src,
@@ -64,20 +56,53 @@ export function UploadedVideoPlayer({
   videoRef,
 }: UploadedVideoPlayerProps) {
   const [containerRef, containerRect] = useResizeObserver<HTMLDivElement>();
-  const [drawingAnnotations, setDrawingAnnotations] = useState<
+  const [localDrawingAnnotations, setLocalDrawingAnnotations] = useState<
     DrawingAnnotation[]
   >([]);
-  const [drawingColor, setDrawingColor] = useState("#df4b26");
+  const [drawingColor, setDrawingColor] = useState(DEFAULT_START_COLOR);
   const [isDrawingModeEnabled, setIsDrawingModeEnabled] = useState(false);
+  const [showDrawings, setShowDrawings] = useState(true);
   const [strokeWidth, setStrokeWidth] = useState(5);
-  const [tool, setTool] = useState<DrawingTool>("pen");
+  const [tool, setTool] = useState<DrawingTool>(DRAWING_TOOL.pen);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
   const activeAnnotationId = useRef<string | null>(null);
   const isDrawing = useRef(false);
+  const isSavingDrawings = useRef(false);
 
-  const visibleAnnotations = drawingAnnotations.filter((annotation) =>
+  const allDrawingAnnotations = [
+    ...drawingAnnotations,
+    ...localDrawingAnnotations,
+  ];
+  const visibleAnnotations = allDrawingAnnotations.filter((annotation) =>
     isAnnotationVisible(annotation, currentTimeSeconds),
   );
+
+  const savePendingDrawingAnnotations = useCallback(async () => {
+    if (
+      isDrawing.current ||
+      isSavingDrawings.current ||
+      localDrawingAnnotations.length === 0
+    ) {
+      return;
+    }
+
+    const drawingsToSave = localDrawingAnnotations;
+    const savedDrawingIDs = new Set(
+      drawingsToSave.map((drawing) => drawing.id),
+    );
+
+    isSavingDrawings.current = true;
+    try {
+      await onSaveDrawingAnnotations(drawingsToSave);
+      setLocalDrawingAnnotations((currentAnnotations) =>
+        currentAnnotations.filter(
+          (annotation) => !savedDrawingIDs.has(annotation.id),
+        ),
+      );
+    } finally {
+      isSavingDrawings.current = false;
+    }
+  }, [localDrawingAnnotations, onSaveDrawingAnnotations]);
 
   function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
     if (!isDrawingModeEnabled) {
@@ -103,16 +128,16 @@ export function UploadedVideoPlayer({
     if (isFreehandTool(tool)) {
       drawingShape = {
         id: shapeId,
-        type: "freehand",
+        type: DRAWING_SHAPE_TYPE.freehand,
         color: drawingColor,
         points: [normalizedPosition.x, normalizedPosition.y],
         strokeWidth,
         tool,
       };
-    } else if (tool === "rectangle") {
+    } else if (tool === DRAWING_TOOL.rectangle) {
       drawingShape = {
         id: shapeId,
-        type: "rectangle",
+        type: DRAWING_SHAPE_TYPE.rectangle,
         color: drawingColor,
         height: 0,
         strokeWidth,
@@ -123,7 +148,7 @@ export function UploadedVideoPlayer({
     } else {
       drawingShape = {
         id: shapeId,
-        type: "circle",
+        type: DRAWING_SHAPE_TYPE.circle,
         color: drawingColor,
         radius: 0,
         strokeWidth,
@@ -132,7 +157,7 @@ export function UploadedVideoPlayer({
       };
     }
 
-    setDrawingAnnotations((currentAnnotations) => [
+    setLocalDrawingAnnotations((currentAnnotations) => [
       ...currentAnnotations,
       {
         id: annotationId,
@@ -141,7 +166,6 @@ export function UploadedVideoPlayer({
         drawingJson: [drawingShape],
       },
     ]);
-    console.log(drawingAnnotations);
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {
@@ -159,7 +183,7 @@ export function UploadedVideoPlayer({
       return;
     }
 
-    setDrawingAnnotations((currentAnnotations) =>
+    setLocalDrawingAnnotations((currentAnnotations) =>
       currentAnnotations.map((annotation) => {
         if (annotation.id !== activeAnnotationId.current) {
           return annotation;
@@ -171,7 +195,7 @@ export function UploadedVideoPlayer({
           return annotation;
         }
 
-        if (drawing.type === "freehand") {
+        if (drawing.type === DRAWING_SHAPE_TYPE.freehand) {
           return {
             ...annotation,
             drawingJson: [
@@ -187,7 +211,7 @@ export function UploadedVideoPlayer({
           };
         }
 
-        if (drawing.type === "rectangle") {
+        if (drawing.type === DRAWING_SHAPE_TYPE.rectangle) {
           return {
             ...annotation,
             drawingJson: [
@@ -232,38 +256,10 @@ export function UploadedVideoPlayer({
     activeAnnotationId.current = null;
   }
 
-  function handleUndoLastDrawing() {
-    isDrawing.current = false;
-    activeAnnotationId.current = null;
-    setDrawingAnnotations((currentAnnotations) =>
-      currentAnnotations.slice(0, -1),
-    );
-  }
-
   function handleTimeUpdate(video: HTMLVideoElement) {
     setCurrentTimeSeconds(video.currentTime);
     onTimeChange?.(video.currentTime);
   }
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      const isUndoKey = event.key.toLowerCase() === "z";
-      const isModifierPressed = event.ctrlKey || event.metaKey;
-
-      if (!isUndoKey || !isModifierPressed) {
-        return;
-      }
-
-      event.preventDefault();
-      handleUndoLastDrawing();
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -281,24 +277,38 @@ export function UploadedVideoPlayer({
     };
   }, [src, videoRef]);
 
+  useEffect(() => {
+    if (localDrawingAnnotations.length === 0) {
+      return;
+    }
+
+    const timeoutID = window.setTimeout(() => {
+      void savePendingDrawingAnnotations().catch(() => {});
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timeoutID);
+    };
+  }, [localDrawingAnnotations, savePendingDrawingAnnotations]);
+
   return (
-    <Paper withBorder p="md" radius="md">
+    <Paper className="vc-elevated-card" p="md" radius="md">
       <Stack gap="sm">
         <Stack gap="sm">
           <Text fw={600}>{title}</Text>
           <DrawingToolbar
-            canUndo={drawingAnnotations.length > 0}
             color={drawingColor}
             drawingModeEnabled={isDrawingModeEnabled}
             isTheatreMode={isTheatreMode}
+            showDrawings={showDrawings}
             strokeWidth={strokeWidth}
             tool={tool}
             onColorChange={setDrawingColor}
             onDrawingModeChange={handleDrawingModeChange}
+            onShowDrawingsChange={setShowDrawings}
             onStrokeWidthChange={setStrokeWidth}
             onTheatreModeChange={onTheatreModeChange}
             onToolChange={setTool}
-            onUndo={handleUndoLastDrawing}
           />
         </Stack>
 
@@ -328,65 +338,67 @@ export function UploadedVideoPlayer({
               onMouseUp={handleMouseUp}
             >
               <Layer>
-                {visibleAnnotations.flatMap((annotation) =>
-                  annotation.drawingJson.map((drawing) => {
-                    if (drawing.type === "freehand") {
-                      return (
-                        <Line
-                          key={drawing.id}
-                          points={denormalizePoints(
-                            drawing.points,
-                            containerRect.width,
-                            containerRect.height,
-                          )}
-                          stroke={drawing.color}
-                          strokeWidth={drawing.strokeWidth}
-                          tension={0.5}
-                          lineCap="round"
-                          lineJoin="round"
-                          globalCompositeOperation={
-                            drawing.tool === "eraser"
-                              ? "destination-out"
-                              : "source-over"
-                          }
-                        />
-                      );
-                    }
-
-                    if (drawing.type === "rectangle") {
-                      const rectangle = normalizeRect(drawing);
-
-                      return (
-                        <Rect
-                          key={drawing.id}
-                          height={rectangle.height * containerRect.height}
-                          stroke={drawing.color}
-                          strokeWidth={drawing.strokeWidth}
-                          width={rectangle.width * containerRect.width}
-                          x={rectangle.x * containerRect.width}
-                          y={rectangle.y * containerRect.height}
-                        />
-                      );
-                    }
-
-                    return (
-                      <Circle
-                        key={drawing.id}
-                        radius={
-                          drawing.radius *
-                          getScaleBase(
-                            containerRect.width,
-                            containerRect.height,
-                          )
+                {showDrawings
+                  ? visibleAnnotations.flatMap((annotation) =>
+                      annotation.drawingJson.map((drawing) => {
+                        if (drawing.type === DRAWING_SHAPE_TYPE.freehand) {
+                          return (
+                            <Line
+                              key={drawing.id}
+                              points={denormalizePoints(
+                                drawing.points,
+                                containerRect.width,
+                                containerRect.height,
+                              )}
+                              stroke={drawing.color}
+                              strokeWidth={drawing.strokeWidth}
+                              tension={0.5}
+                              lineCap="round"
+                              lineJoin="round"
+                              globalCompositeOperation={
+                                drawing.tool === DRAWING_TOOL.eraser
+                                  ? "destination-out"
+                                  : "source-over"
+                              }
+                            />
+                          );
                         }
-                        stroke={drawing.color}
-                        strokeWidth={drawing.strokeWidth}
-                        x={drawing.x * containerRect.width}
-                        y={drawing.y * containerRect.height}
-                      />
-                    );
-                  }),
-                )}
+
+                        if (drawing.type === DRAWING_SHAPE_TYPE.rectangle) {
+                          const rectangle = normalizeRect(drawing);
+
+                          return (
+                            <Rect
+                              key={drawing.id}
+                              height={rectangle.height * containerRect.height}
+                              stroke={drawing.color}
+                              strokeWidth={drawing.strokeWidth}
+                              width={rectangle.width * containerRect.width}
+                              x={rectangle.x * containerRect.width}
+                              y={rectangle.y * containerRect.height}
+                            />
+                          );
+                        }
+
+                        return (
+                          <Circle
+                            key={drawing.id}
+                            radius={
+                              drawing.radius *
+                              getScaleBase(
+                                containerRect.width,
+                                containerRect.height,
+                              )
+                            }
+                            stroke={drawing.color}
+                            strokeWidth={drawing.strokeWidth}
+                            x={drawing.x * containerRect.width}
+                            y={drawing.y * containerRect.height}
+                          />
+                        );
+                      }),
+                    )
+                  : null}
               </Layer>
             </Stage>
           </Box>

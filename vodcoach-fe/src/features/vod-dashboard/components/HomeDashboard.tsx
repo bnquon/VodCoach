@@ -52,7 +52,7 @@ export function HomeDashboard() {
 
   return (
     <main>
-      <Paper withBorder radius={0}>
+      <Paper className="vc-topbar" radius={0}>
         <Container size="xl" py="sm">
           <Group justify="space-between">
             <Title order={1} size="h3">

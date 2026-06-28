@@ -3,8 +3,10 @@ package server
 import (
 	"net/http"
 
+	authmiddleware "github.com/bnquon/vodcoach-api/cmd/api/internal/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/health"
+	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/notes"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/services"
 	"github.com/gin-gonic/gin"
@@ -18,18 +20,35 @@ func NewRouter(pool *pgxpool.Pool) *gin.Engine {
 	appHealthHandler := health.NewAppHealthHandler()
 	dbHealthHandler := health.NewDBHealthHandler(pool)
 
-	usersRepository := repository.NewUsersRepository(pool)
+	userRepository := repository.NewUserRepository(pool)
+	noteRepository := repository.NewNoteRepository(pool)
+	drawingRepository := repository.NewDrawingRepository(pool)
+	vodRepository := repository.NewVodRepository(pool)
 
-	authService := services.NewAuthService(usersRepository)
+	authService := services.NewAuthService(userRepository)
+	noteService := services.NewNoteService(noteRepository, vodRepository)
+	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
 
-	registerUserHandler := auth.NewRegisterUserHandler(authService)
-	loginUserHandler := auth.NewLoginUserHandler(authService)
+	registerHandler := auth.NewRegisterHandler(authService)
+	loginHandler := auth.NewLoginHandler(authService)
+	noteHandler := notes.NewNoteHandler(noteService)
+	annotationHandler := notes.NewAnnotationHandler(annotationService)
 
 	router.GET("/health", appHealthHandler.Health)
 	router.GET("/health/db", dbHealthHandler.Health)
 
-	router.POST("/register", registerUserHandler.RegisterUser)
-	router.POST("/login", loginUserHandler.LoginUser)
+	router.POST("/register", registerHandler.Register)
+	router.POST("/login", loginHandler.Login)
+
+	protected := router.Group("/")
+	protected.Use(authmiddleware.Middleware())
+	protected.GET("/vods/:vodID/notes", noteHandler.GetNotes)
+	protected.POST("/vods/:vodID/notes", noteHandler.CreateNote)
+	protected.PATCH("/vods/:vodID/notes/:noteID", noteHandler.UpdateNote)
+	protected.DELETE("/vods/:vodID/notes/:noteID", noteHandler.DeleteNote)
+	protected.GET("/vods/:vodID/annotations", annotationHandler.GetAnnotations)
+	protected.POST("/vods/:vodID/annotations", annotationHandler.CreateAnnotation)
+	protected.POST("/vods/:vodID/annotations/batch", annotationHandler.CreateAnnotationsBatch)
 
 	return router
 }

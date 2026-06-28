@@ -55,6 +55,8 @@ Done when:
 
 Use a sample video URL for this phase.
 
+DONE
+
 ## Phase 3: Cloudflare R2 Uploads
 
 Add real video upload.
@@ -70,7 +72,7 @@ Build:
 * frontend upload progress
 * dashboard showing uploaded VODs
 
-Done when:
+Completed: June 28 ✅
 
 * user can upload a video to R2
 * VOD row stores the R2 key

@@ -1,0 +1,2 @@
+ALTER TABLE drawings
+DROP COLUMN IF EXISTS color;

@@ -18,7 +18,7 @@ export function DashboardUploadCard() {
   const [game, setGame] = useState("");
 
   return (
-    <Paper withBorder p="lg" radius="md">
+    <Paper className="vc-elevated-card" p="lg" radius="md">
       <Stack gap="md">
         <Stack gap={4}>
           <Title order={2} size="h3">
