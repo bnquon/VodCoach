@@ -11,12 +11,12 @@ import (
 var ErrInvalidCredentials = errors.New("invalid email or password")
 
 type AuthService struct {
-	usersRepository *repository.UsersRepository
+	userRepository *repository.UserRepository
 }
 
-func NewAuthService(usersRepository *repository.UsersRepository) *AuthService {
+func NewAuthService(userRepository *repository.UserRepository) *AuthService {
 	return &AuthService{
-		usersRepository: usersRepository,
+		userRepository: userRepository,
 	}
 }
 
@@ -36,7 +36,7 @@ func (s *AuthService) Register(ctx context.Context, email string, password strin
 		return nil, err
 	}
 
-	createdID, err := s.usersRepository.CreateUser(ctx, email, hashedPassword)
+	createdID, err := s.userRepository.CreateUser(ctx, email, hashedPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (s *AuthService) Register(ctx context.Context, email string, password strin
 }
 
 func (s *AuthService) Login(ctx context.Context, email string, password string) (*AuthResponse, error) {
-	user, err := s.usersRepository.GetUserByEmail(ctx, email)
+	user, err := s.userRepository.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}

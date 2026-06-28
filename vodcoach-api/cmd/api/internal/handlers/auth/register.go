@@ -7,23 +7,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type RegisterUserHandler struct {
+type RegisterHandler struct {
 	authService *services.AuthService
 }
 
-type RegisterUserRequestBody struct {
+type RegisterRequestBody struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 }
 
-func NewRegisterUserHandler(authService *services.AuthService) *RegisterUserHandler {
-	return &RegisterUserHandler{
+func NewRegisterHandler(authService *services.AuthService) *RegisterHandler {
+	return &RegisterHandler{
 		authService: authService,
 	}
 }
 
-func (h *RegisterUserHandler) RegisterUser(c *gin.Context) {
-	var body RegisterUserRequestBody
+func (h *RegisterHandler) Register(c *gin.Context) {
+	var body RegisterRequestBody
 
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or missing email/password field"})

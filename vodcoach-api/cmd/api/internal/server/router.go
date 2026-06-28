@@ -18,18 +18,18 @@ func NewRouter(pool *pgxpool.Pool) *gin.Engine {
 	appHealthHandler := health.NewAppHealthHandler()
 	dbHealthHandler := health.NewDBHealthHandler(pool)
 
-	usersRepository := repository.NewUsersRepository(pool)
+	userRepository := repository.NewUserRepository(pool)
 
-	authService := services.NewAuthService(usersRepository)
+	authService := services.NewAuthService(userRepository)
 
-	registerUserHandler := auth.NewRegisterUserHandler(authService)
-	loginUserHandler := auth.NewLoginUserHandler(authService)
+	registerHandler := auth.NewRegisterHandler(authService)
+	loginHandler := auth.NewLoginHandler(authService)
 
 	router.GET("/health", appHealthHandler.Health)
 	router.GET("/health/db", dbHealthHandler.Health)
 
-	router.POST("/register", registerUserHandler.RegisterUser)
-	router.POST("/login", loginUserHandler.LoginUser)
+	router.POST("/register", registerHandler.Register)
+	router.POST("/login", loginHandler.Login)
 
 	return router
 }
