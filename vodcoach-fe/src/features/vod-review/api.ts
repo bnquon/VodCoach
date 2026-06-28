@@ -6,6 +6,8 @@ export const TEST_VOD_ID = "c6e40d43-a331-4f2b-a68f-07a13089ac15";
 
 export const vodNotesQueryKey = (vodID: string) =>
   ["vod-notes", vodID] as const;
+export const vodAnnotationsQueryKey = (vodID: string) =>
+  ["vod-annotations", vodID] as const;
 
 export const NOTE_KIND = {
   general: "general",
@@ -44,6 +46,23 @@ export type CreateNoteRequestBody = {
   tags: string[];
 };
 
+export type UpdateNoteRequestBody = {
+  timestamp_seconds: number | null;
+  note_text: string;
+  tags: string[];
+};
+
+export type CreateDrawingRequestBody = {
+  timestamp_seconds: number;
+  duration_seconds: number;
+  color: string;
+  drawing_json: DrawingShape[];
+};
+
+export type CreateDrawingsRequestBody = {
+  drawings: CreateDrawingRequestBody[];
+};
+
 export async function getVodNotes(vodID: string) {
   return toApiResult(
     api
@@ -61,10 +80,33 @@ export async function createVodNote(
     .then((response) => response.data);
 }
 
+export async function updateVodNote(
+  vodID: string,
+  noteID: string,
+  body: UpdateNoteRequestBody,
+) {
+  return api
+    .patch<NoteDTO>(`/vods/${vodID}/notes/${noteID}`, body)
+    .then((response) => response.data);
+}
+
+export async function deleteVodNote(vodID: string, noteID: string) {
+  return api.delete(`/vods/${vodID}/notes/${noteID}`);
+}
+
 export async function getVodAnnotations(vodID: string) {
   return toApiResult(
     api
       .get<AnnotationsDTO>(`/vods/${vodID}/annotations`)
       .then((response) => response.data),
   );
+}
+
+export async function createVodDrawingsBatch(
+  vodID: string,
+  body: CreateDrawingsRequestBody,
+) {
+  return api
+    .post<DrawingDTO[]>(`/vods/${vodID}/annotations/batch`, body)
+    .then((response) => response.data);
 }

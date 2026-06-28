@@ -54,6 +54,18 @@ func (s *AnnotationService) CreateDrawing(ctx context.Context, params repository
 	return s.drawingRepository.CreateDrawing(ctx, params)
 }
 
+func (s *AnnotationService) CreateDrawings(ctx context.Context, params []repository.CreateDrawingParams) ([]repository.Drawing, error) {
+	if len(params) == 0 {
+		return []repository.Drawing{}, nil
+	}
+
+	if err := s.requireVodOwner(ctx, params[0].VodID, params[0].UserID); err != nil {
+		return nil, err
+	}
+
+	return s.drawingRepository.CreateDrawings(ctx, params)
+}
+
 func (s *AnnotationService) requireVodOwner(ctx context.Context, vodID string, userID string) error {
 	ownsVod, err := s.vodRepository.UserOwnsVod(ctx, vodID, userID)
 	if err != nil {

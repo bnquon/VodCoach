@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,6 +28,14 @@ type CreateNoteParams struct {
 	VodID            string
 	UserID           string
 	NoteKind         string
+	TimestampSeconds *int
+	NoteText         string
+	Tags             []string
+}
+
+type UpdateNoteParams struct {
+	ID               string
+	VodID            string
 	TimestampSeconds *int
 	NoteText         string
 	Tags             []string
@@ -120,4 +129,57 @@ func (r *NoteRepository) CreateNote(ctx context.Context, params CreateNoteParams
 	}
 
 	return &note, nil
+}
+
+func (r *NoteRepository) UpdateNote(ctx context.Context, params UpdateNoteParams) (*Note, error) {
+	var note Note
+
+	err := r.pool.QueryRow(
+		ctx,
+		`UPDATE notes
+		SET timestamp_seconds = $3, note_text = $4, tags = $5, updated_at = NOW()
+		WHERE id = $1 AND vod_id = $2
+		RETURNING id, vod_id, user_id, note_kind, timestamp_seconds, note_text, tags, created_at, updated_at
+		`,
+		params.ID,
+		params.VodID,
+		params.TimestampSeconds,
+		params.NoteText,
+		params.Tags,
+	).Scan(
+		&note.ID,
+		&note.VodID,
+		&note.UserID,
+		&note.NoteKind,
+		&note.TimestampSeconds,
+		&note.NoteText,
+		&note.Tags,
+		&note.CreatedAt,
+		&note.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &note, nil
+}
+
+func (r *NoteRepository) DeleteNote(ctx context.Context, vodID string, noteID string) (bool, error) {
+	commandTag, err := r.pool.Exec(
+		ctx,
+		`DELETE FROM notes
+		WHERE id = $1 AND vod_id = $2
+		`,
+		noteID,
+		vodID,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return commandTag.RowsAffected() > 0, nil
+}
+
+func IsNoteNotFound(err error) bool {
+	return err == pgx.ErrNoRows
 }

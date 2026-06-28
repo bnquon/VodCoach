@@ -30,6 +30,12 @@ type CreateNoteRequestBody struct {
 	Tags             []string `json:"tags"`
 }
 
+type UpdateNoteRequestBody struct {
+	TimestampSeconds *int     `json:"timestamp_seconds"`
+	NoteText         string   `json:"note_text" binding:"required"`
+	Tags             []string `json:"tags"`
+}
+
 func NewNoteHandler(noteService *services.NoteService) *NoteHandler {
 	return &NoteHandler{
 		noteService: noteService,
@@ -94,6 +100,64 @@ func (h *NoteHandler) CreateNote(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, toNoteResponse(*note))
+}
+
+func (h *NoteHandler) UpdateNote(c *gin.Context) {
+	vodID := c.Param("vodID")
+	noteID := c.Param("noteID")
+	userID := c.GetString(auth.UserIDContextKey)
+
+	var body UpdateNoteRequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note request body"})
+		return
+	}
+
+	note, err := h.noteService.UpdateNote(c.Request.Context(), userID, repository.UpdateNoteParams{
+		ID:               noteID,
+		VodID:            vodID,
+		TimestampSeconds: body.TimestampSeconds,
+		NoteText:         body.NoteText,
+		Tags:             body.Tags,
+	})
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You do not have access to this VOD"})
+			return
+		}
+		if errors.Is(err, services.ErrNoteNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update note"})
+		return
+	}
+
+	c.JSON(http.StatusOK, toNoteResponse(*note))
+}
+
+func (h *NoteHandler) DeleteNote(c *gin.Context) {
+	vodID := c.Param("vodID")
+	noteID := c.Param("noteID")
+	userID := c.GetString(auth.UserIDContextKey)
+
+	err := h.noteService.DeleteNote(c.Request.Context(), vodID, noteID, userID)
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You do not have access to this VOD"})
+			return
+		}
+		if errors.Is(err, services.ErrNoteNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete note"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func toNoteResponses(notes []repository.Note) []NoteResponse {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AspectRatio, Box, Paper, Stack, Text } from "@mantine/core";
 import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
@@ -37,6 +37,9 @@ type UploadedVideoPlayerProps = {
   title: string;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   onDurationChange?: (durationSeconds: number) => void;
+  onSaveDrawingAnnotations: (
+    drawingAnnotations: DrawingAnnotation[],
+  ) => Promise<void>;
   onTheatreModeChange: (enabled: boolean) => void;
   onTimeChange?: (currentTimeSeconds: number) => void;
 };
@@ -45,6 +48,7 @@ export function UploadedVideoPlayer({
   drawingAnnotations,
   isTheatreMode,
   onDurationChange,
+  onSaveDrawingAnnotations,
   onTheatreModeChange,
   onTimeChange,
   src,
@@ -57,11 +61,13 @@ export function UploadedVideoPlayer({
   >([]);
   const [drawingColor, setDrawingColor] = useState(DEFAULT_START_COLOR);
   const [isDrawingModeEnabled, setIsDrawingModeEnabled] = useState(false);
+  const [showDrawings, setShowDrawings] = useState(true);
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [tool, setTool] = useState<DrawingTool>(DRAWING_TOOL.pen);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
   const activeAnnotationId = useRef<string | null>(null);
   const isDrawing = useRef(false);
+  const isSavingDrawings = useRef(false);
 
   const allDrawingAnnotations = [
     ...drawingAnnotations,
@@ -70,6 +76,33 @@ export function UploadedVideoPlayer({
   const visibleAnnotations = allDrawingAnnotations.filter((annotation) =>
     isAnnotationVisible(annotation, currentTimeSeconds),
   );
+
+  const savePendingDrawingAnnotations = useCallback(async () => {
+    if (
+      isDrawing.current ||
+      isSavingDrawings.current ||
+      localDrawingAnnotations.length === 0
+    ) {
+      return;
+    }
+
+    const drawingsToSave = localDrawingAnnotations;
+    const savedDrawingIDs = new Set(
+      drawingsToSave.map((drawing) => drawing.id),
+    );
+
+    isSavingDrawings.current = true;
+    try {
+      await onSaveDrawingAnnotations(drawingsToSave);
+      setLocalDrawingAnnotations((currentAnnotations) =>
+        currentAnnotations.filter(
+          (annotation) => !savedDrawingIDs.has(annotation.id),
+        ),
+      );
+    } finally {
+      isSavingDrawings.current = false;
+    }
+  }, [localDrawingAnnotations, onSaveDrawingAnnotations]);
 
   function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
     if (!isDrawingModeEnabled) {
@@ -223,38 +256,10 @@ export function UploadedVideoPlayer({
     activeAnnotationId.current = null;
   }
 
-  function handleUndoLastDrawing() {
-    isDrawing.current = false;
-    activeAnnotationId.current = null;
-    setLocalDrawingAnnotations((currentAnnotations) =>
-      currentAnnotations.slice(0, -1),
-    );
-  }
-
   function handleTimeUpdate(video: HTMLVideoElement) {
     setCurrentTimeSeconds(video.currentTime);
     onTimeChange?.(video.currentTime);
   }
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      const isUndoKey = event.key.toLowerCase() === "z";
-      const isModifierPressed = event.ctrlKey || event.metaKey;
-
-      if (!isUndoKey || !isModifierPressed) {
-        return;
-      }
-
-      event.preventDefault();
-      handleUndoLastDrawing();
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -272,24 +277,38 @@ export function UploadedVideoPlayer({
     };
   }, [src, videoRef]);
 
+  useEffect(() => {
+    if (localDrawingAnnotations.length === 0) {
+      return;
+    }
+
+    const timeoutID = window.setTimeout(() => {
+      void savePendingDrawingAnnotations().catch(() => {});
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timeoutID);
+    };
+  }, [localDrawingAnnotations, savePendingDrawingAnnotations]);
+
   return (
     <Paper className="vc-elevated-card" p="md" radius="md">
       <Stack gap="sm">
         <Stack gap="sm">
           <Text fw={600}>{title}</Text>
           <DrawingToolbar
-            canUndo={localDrawingAnnotations.length > 0}
             color={drawingColor}
             drawingModeEnabled={isDrawingModeEnabled}
             isTheatreMode={isTheatreMode}
+            showDrawings={showDrawings}
             strokeWidth={strokeWidth}
             tool={tool}
             onColorChange={setDrawingColor}
             onDrawingModeChange={handleDrawingModeChange}
+            onShowDrawingsChange={setShowDrawings}
             onStrokeWidthChange={setStrokeWidth}
             onTheatreModeChange={onTheatreModeChange}
             onToolChange={setTool}
-            onUndo={handleUndoLastDrawing}
           />
         </Stack>
 
@@ -319,65 +338,67 @@ export function UploadedVideoPlayer({
               onMouseUp={handleMouseUp}
             >
               <Layer>
-                {visibleAnnotations.flatMap((annotation) =>
-                  annotation.drawingJson.map((drawing) => {
-                    if (drawing.type === DRAWING_SHAPE_TYPE.freehand) {
-                      return (
-                        <Line
-                          key={drawing.id}
-                          points={denormalizePoints(
-                            drawing.points,
-                            containerRect.width,
-                            containerRect.height,
-                          )}
-                          stroke={drawing.color}
-                          strokeWidth={drawing.strokeWidth}
-                          tension={0.5}
-                          lineCap="round"
-                          lineJoin="round"
-                          globalCompositeOperation={
-                            drawing.tool === DRAWING_TOOL.eraser
-                              ? "destination-out"
-                              : "source-over"
-                          }
-                        />
-                      );
-                    }
-
-                    if (drawing.type === DRAWING_SHAPE_TYPE.rectangle) {
-                      const rectangle = normalizeRect(drawing);
-
-                      return (
-                        <Rect
-                          key={drawing.id}
-                          height={rectangle.height * containerRect.height}
-                          stroke={drawing.color}
-                          strokeWidth={drawing.strokeWidth}
-                          width={rectangle.width * containerRect.width}
-                          x={rectangle.x * containerRect.width}
-                          y={rectangle.y * containerRect.height}
-                        />
-                      );
-                    }
-
-                    return (
-                      <Circle
-                        key={drawing.id}
-                        radius={
-                          drawing.radius *
-                          getScaleBase(
-                            containerRect.width,
-                            containerRect.height,
-                          )
+                {showDrawings
+                  ? visibleAnnotations.flatMap((annotation) =>
+                      annotation.drawingJson.map((drawing) => {
+                        if (drawing.type === DRAWING_SHAPE_TYPE.freehand) {
+                          return (
+                            <Line
+                              key={drawing.id}
+                              points={denormalizePoints(
+                                drawing.points,
+                                containerRect.width,
+                                containerRect.height,
+                              )}
+                              stroke={drawing.color}
+                              strokeWidth={drawing.strokeWidth}
+                              tension={0.5}
+                              lineCap="round"
+                              lineJoin="round"
+                              globalCompositeOperation={
+                                drawing.tool === DRAWING_TOOL.eraser
+                                  ? "destination-out"
+                                  : "source-over"
+                              }
+                            />
+                          );
                         }
-                        stroke={drawing.color}
-                        strokeWidth={drawing.strokeWidth}
-                        x={drawing.x * containerRect.width}
-                        y={drawing.y * containerRect.height}
-                      />
-                    );
-                  }),
-                )}
+
+                        if (drawing.type === DRAWING_SHAPE_TYPE.rectangle) {
+                          const rectangle = normalizeRect(drawing);
+
+                          return (
+                            <Rect
+                              key={drawing.id}
+                              height={rectangle.height * containerRect.height}
+                              stroke={drawing.color}
+                              strokeWidth={drawing.strokeWidth}
+                              width={rectangle.width * containerRect.width}
+                              x={rectangle.x * containerRect.width}
+                              y={rectangle.y * containerRect.height}
+                            />
+                          );
+                        }
+
+                        return (
+                          <Circle
+                            key={drawing.id}
+                            radius={
+                              drawing.radius *
+                              getScaleBase(
+                                containerRect.width,
+                                containerRect.height,
+                              )
+                            }
+                            stroke={drawing.color}
+                            strokeWidth={drawing.strokeWidth}
+                            x={drawing.x * containerRect.width}
+                            y={drawing.y * containerRect.height}
+                          />
+                        );
+                      }),
+                    )
+                  : null}
               </Layer>
             </Stage>
           </Box>

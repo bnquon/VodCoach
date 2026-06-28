@@ -44,8 +44,11 @@ func NewRouter(pool *pgxpool.Pool) *gin.Engine {
 	protected.Use(authmiddleware.Middleware())
 	protected.GET("/vods/:vodID/notes", noteHandler.GetNotes)
 	protected.POST("/vods/:vodID/notes", noteHandler.CreateNote)
+	protected.PATCH("/vods/:vodID/notes/:noteID", noteHandler.UpdateNote)
+	protected.DELETE("/vods/:vodID/notes/:noteID", noteHandler.DeleteNote)
 	protected.GET("/vods/:vodID/annotations", annotationHandler.GetAnnotations)
 	protected.POST("/vods/:vodID/annotations", annotationHandler.CreateAnnotation)
+	protected.POST("/vods/:vodID/annotations/batch", annotationHandler.CreateAnnotationsBatch)
 
 	return router
 }

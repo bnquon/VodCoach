@@ -8,6 +8,7 @@ import (
 )
 
 var ErrVodAccessDenied = errors.New("vod access denied")
+var ErrNoteNotFound = errors.New("note not found")
 
 type NoteService struct {
 	noteRepository *repository.NoteRepository
@@ -35,6 +36,39 @@ func (s *NoteService) CreateNote(ctx context.Context, params repository.CreateNo
 	}
 
 	return s.noteRepository.CreateNote(ctx, params)
+}
+
+func (s *NoteService) UpdateNote(ctx context.Context, userID string, params repository.UpdateNoteParams) (*repository.Note, error) {
+	if err := s.requireVodOwner(ctx, params.VodID, userID); err != nil {
+		return nil, err
+	}
+
+	note, err := s.noteRepository.UpdateNote(ctx, params)
+	if err != nil {
+		if repository.IsNoteNotFound(err) {
+			return nil, ErrNoteNotFound
+		}
+
+		return nil, err
+	}
+
+	return note, nil
+}
+
+func (s *NoteService) DeleteNote(ctx context.Context, vodID string, noteID string, userID string) error {
+	if err := s.requireVodOwner(ctx, vodID, userID); err != nil {
+		return err
+	}
+
+	deleted, err := s.noteRepository.DeleteNote(ctx, vodID, noteID)
+	if err != nil {
+		return err
+	}
+	if !deleted {
+		return ErrNoteNotFound
+	}
+
+	return nil
 }
 
 func (s *NoteService) requireVodOwner(ctx context.Context, vodID string, userID string) error {

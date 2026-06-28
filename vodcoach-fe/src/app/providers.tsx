@@ -17,7 +17,12 @@ export function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <MantineProvider defaultColorScheme="dark">
         {children}
-        <ToastContainer theme="dark" position="top-right" />
+        <ToastContainer
+          theme="dark"
+          pauseOnFocusLoss={false}
+          autoClose={2500}
+          position="bottom-right"
+        />
       </MantineProvider>
     </QueryClientProvider>
   );

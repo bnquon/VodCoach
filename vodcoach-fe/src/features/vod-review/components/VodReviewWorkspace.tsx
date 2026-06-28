@@ -1,14 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Box, Flex, Stack } from "@mantine/core";
 import { NOTE_KIND } from "../api";
-import { useCreateVodNote, useVodAnnotations, useVodNotes } from "../hooks";
+import {
+  useCreateVodDrawingsBatch,
+  useDeleteVodNote,
+  useCreateVodNote,
+  useUpdateVodNote,
+  useVodAnnotations,
+  useVodNotes,
+} from "../hooks";
 import {
   toDrawingAnnotations,
   toGeneralNotes,
   toTimestampedNotes,
 } from "../mappers";
+import { DEFAULT_START_COLOR, type DrawingAnnotation } from "../drawing/types";
 import { GeneralNotes } from "./GeneralNotes";
 import { TimeStampedNotes } from "./TimeStampedNotes";
 import { UploadedVideoPlayer } from "./UploadedVideoPlayer";
@@ -28,6 +36,9 @@ export function VodReviewWorkspace({
   const { notes: fetchedNotes } = useVodNotes();
   const { annotations } = useVodAnnotations();
   const createNote = useCreateVodNote();
+  const updateNote = useUpdateVodNote();
+  const deleteNote = useDeleteVodNote();
+  const createDrawingsBatch = useCreateVodDrawingsBatch();
   const notes = toTimestampedNotes(fetchedNotes);
   const generalNotes = toGeneralNotes(fetchedNotes);
   const drawingAnnotations = toDrawingAnnotations(annotations.drawings);
@@ -73,6 +84,47 @@ export function VodReviewWorkspace({
     });
   }
 
+  function handleUpdateTimestampedNote(note: {
+    id: string;
+    noteText: string;
+    tags: string[];
+    timestampSeconds: number;
+  }) {
+    updateNote.mutate({
+      id: note.id,
+      timestampSeconds: note.timestampSeconds,
+      noteText: note.noteText,
+      tags: note.tags,
+    });
+  }
+
+  function handleUpdateGeneralNote(note: {
+    id: string;
+    noteText: string;
+    tags: string[];
+  }) {
+    updateNote.mutate({
+      id: note.id,
+      timestampSeconds: null,
+      noteText: note.noteText,
+      tags: note.tags,
+    });
+  }
+
+  const handleSaveDrawingAnnotations = useCallback(
+    async (drawings: DrawingAnnotation[]): Promise<void> => {
+      await createDrawingsBatch.mutateAsync(
+        drawings.map((drawing) => ({
+          timestamp_seconds: drawing.timestampSeconds,
+          duration_seconds: drawing.durationSeconds,
+          color: drawing.drawingJson[0]?.color ?? DEFAULT_START_COLOR,
+          drawing_json: drawing.drawingJson,
+        })),
+      );
+    },
+    [createDrawingsBatch],
+  );
+
   return (
     <Stack gap="xl">
       <Flex
@@ -94,6 +146,7 @@ export function VodReviewWorkspace({
             isTheatreMode={isTheatreMode}
             videoRef={videoPlayerRef}
             onDurationChange={setDurationSeconds}
+            onSaveDrawingAnnotations={handleSaveDrawingAnnotations}
             onTheatreModeChange={setIsTheatreMode}
             onTimeChange={setCurrentTimeSeconds}
           />
@@ -113,6 +166,8 @@ export function VodReviewWorkspace({
               notes={notes}
               onAddNoteStart={handleTimestampNoteAddStart}
               onCreateNote={handleCreateTimestampedNote}
+              onDeleteNote={(noteID) => deleteNote.mutate(noteID)}
+              onUpdateNote={handleUpdateTimestampedNote}
               onTimestampClick={handleTimestampClick}
             />
           </Box>
@@ -120,6 +175,8 @@ export function VodReviewWorkspace({
             <GeneralNotes
               notes={generalNotes}
               onCreateNote={handleCreateGeneralNote}
+              onDeleteNote={(noteID) => deleteNote.mutate(noteID)}
+              onUpdateNote={handleUpdateGeneralNote}
             />
           </Box>
         </Flex>

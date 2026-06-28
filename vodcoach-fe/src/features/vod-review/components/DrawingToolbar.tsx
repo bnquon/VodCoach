@@ -13,33 +13,33 @@ import { HexColorPicker } from "react-colorful";
 import { DRAWING_TOOL, type DrawingTool } from "../drawing/types";
 
 type DrawingToolbarProps = {
-  canUndo: boolean;
   color: string;
   drawingModeEnabled: boolean;
   isTheatreMode: boolean;
+  showDrawings: boolean;
   strokeWidth: number;
   tool: DrawingTool;
   onColorChange: (color: string) => void;
   onDrawingModeChange: (enabled: boolean) => void;
+  onShowDrawingsChange: (enabled: boolean) => void;
   onStrokeWidthChange: (strokeWidth: number) => void;
   onTheatreModeChange: (enabled: boolean) => void;
   onToolChange: (tool: DrawingTool) => void;
-  onUndo: () => void;
 };
 
 export function DrawingToolbar({
-  canUndo,
   color,
   drawingModeEnabled,
   isTheatreMode,
+  showDrawings,
   strokeWidth,
   tool,
   onColorChange,
   onDrawingModeChange,
+  onShowDrawingsChange,
   onStrokeWidthChange,
   onTheatreModeChange,
   onToolChange,
-  onUndo,
 }: DrawingToolbarProps) {
   return (
     <Group gap="sm">
@@ -88,15 +88,6 @@ export function DrawingToolbar({
       </Stack>
 
       <Button
-        disabled={!canUndo}
-        size="compact-sm"
-        variant="light"
-        onClick={onUndo}
-      >
-        Undo
-      </Button>
-
-      <Button
         size="compact-sm"
         variant={isTheatreMode ? "filled" : "light"}
         onClick={() => onTheatreModeChange(!isTheatreMode)}
@@ -108,6 +99,12 @@ export function DrawingToolbar({
         checked={drawingModeEnabled}
         label="Drawing mode"
         onChange={(event) => onDrawingModeChange(event.currentTarget.checked)}
+      />
+
+      <Switch
+        checked={showDrawings}
+        label="Show drawings"
+        onChange={(event) => onShowDrawingsChange(event.currentTarget.checked)}
       />
     </Group>
   );
