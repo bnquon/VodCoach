@@ -16,12 +16,15 @@
     "@mantine/core": "^9.4.0",
     "@mantine/dropzone": "^9.4.0",
     "@mantine/hooks": "^9.4.0",
+    "@tanstack/react-query": "^5.101.2",
+    "axios": "^1.18.1",
     "konva": "^10.3.0",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-colorful": "^5.7.0",
     "react-dom": "19.2.4",
-    "react-konva": "^19.2.5"
+    "react-konva": "^19.2.5",
+    "react-toastify": "^11.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

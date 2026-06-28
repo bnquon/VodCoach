@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Container,
@@ -15,6 +15,8 @@ import {
 } from "@mantine/core";
 import { DashboardUploadCard } from "./DashboardUploadCard";
 import { VodCard } from "./VodCard";
+import { clearAuth } from "@/lib/auth-storage";
+import { useAuthUser } from "@/lib/use-auth";
 
 const recentVods = [
   { id: "match-1", title: "Match 1", game: "Valorant", status: "Ready" },
@@ -40,6 +42,14 @@ const allVods = [
 ] as const;
 
 export function HomeDashboard() {
+  const router = useRouter();
+  const user = useAuthUser();
+
+  function handleLogout() {
+    clearAuth();
+    router.replace("/login");
+  }
+
   return (
     <main>
       <Paper withBorder radius={0}>
@@ -50,15 +60,10 @@ export function HomeDashboard() {
             </Title>
             <Group gap="sm">
               <Text size="sm" c="dimmed">
-                Brandon
+                {user?.email}
               </Text>
-              <Button
-                component={Link}
-                href="/login"
-                size="compact-sm"
-                variant="subtle"
-              >
-                Login
+              <Button size="compact-sm" variant="subtle" onClick={handleLogout}>
+                Logout
               </Button>
             </Group>
           </Group>

@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import {
-  ColorSchemeScript,
-  MantineProvider,
-  mantineHtmlProps,
-} from "@mantine/core";
+import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
+import { Providers } from "./providers";
 import "@mantine/core/styles.css";
 import "@mantine/dropzone/styles.css";
 import "./globals.css";
@@ -24,7 +21,7 @@ export default function RootLayout({
         <ColorSchemeScript defaultColorScheme="dark" />
       </head>
       <body>
-        <MantineProvider defaultColorScheme="dark">{children}</MantineProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
