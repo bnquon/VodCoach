@@ -38,36 +38,12 @@ func toNoteResponse(note repository.Note) NoteResponse {
 	}
 }
 
-func (h *NoteHandler) GetGeneralNotes(c *gin.Context) {
-	vodID := c.Param("vodID")
-
-	notes, err := h.noteService.GetGeneralNotes(c.Request.Context(), vodID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get general notes"})
-		return
-	}
-
-	c.JSON(http.StatusOK, toNoteResponses(notes))
-}
-
-func (h *NoteHandler) GetTimestampNotes(c *gin.Context) {
-	vodID := c.Param("vodID")
-
-	notes, err := h.noteService.GetTimestampNotes(c.Request.Context(), vodID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get timestamped notes"})
-		return
-	}
-
-	c.JSON(http.StatusOK, toNoteResponses(notes))
-}
-
 func (h *NoteHandler) GetNotes(c *gin.Context) {
 	vodID := c.Param("vodID")
 
 	notes, err := h.noteService.GetNotes(c.Request.Context(), vodID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get both type of notes at once"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get notes"})
 		return
 	}
 

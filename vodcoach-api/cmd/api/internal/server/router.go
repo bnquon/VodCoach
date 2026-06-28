@@ -5,6 +5,7 @@ import (
 
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/health"
+	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/notes"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/services"
 	"github.com/gin-gonic/gin"
@@ -19,17 +20,25 @@ func NewRouter(pool *pgxpool.Pool) *gin.Engine {
 	dbHealthHandler := health.NewDBHealthHandler(pool)
 
 	userRepository := repository.NewUserRepository(pool)
+	noteRepository := repository.NewNoteRepository(pool)
+	drawingRepository := repository.NewDrawingRepository(pool)
 
 	authService := services.NewAuthService(userRepository)
+	noteService := services.NewNoteService(noteRepository)
+	annotationService := services.NewAnnotationService(noteRepository, drawingRepository)
 
 	registerHandler := auth.NewRegisterHandler(authService)
 	loginHandler := auth.NewLoginHandler(authService)
+	noteHandler := notes.NewNoteHandler(noteService)
+	annotationHandler := notes.NewAnnotationHandler(annotationService)
 
 	router.GET("/health", appHealthHandler.Health)
 	router.GET("/health/db", dbHealthHandler.Health)
 
 	router.POST("/register", registerHandler.Register)
 	router.POST("/login", loginHandler.Login)
+	router.GET("/vods/:vodID/notes", noteHandler.GetNotes)
+	router.GET("/vods/:vodID/annotations", annotationHandler.GetAnnotations)
 
 	return router
 }
