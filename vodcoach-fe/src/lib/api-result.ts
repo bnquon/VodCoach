@@ -14,14 +14,6 @@ export async function toApiResult<T>(
   }
 }
 
-export function getResultData<T>(result: ApiResult<T> | undefined) {
-  return result?.[0] ?? null;
-}
-
-export function getResultError<T>(result: ApiResult<T> | undefined) {
-  return result?.[1] ?? null;
-}
-
 function normalizeApiError(error: unknown) {
   if (isAxiosError(error)) {
     const message =
