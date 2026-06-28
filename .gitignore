@@ -1,2 +1,32 @@
 # Local video fixtures
 vodcoach-fe/public/*.mp4
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Go build outputs
+.cache/
+bin/
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Go coverage/profiling
+coverage.out
+*.cover
+*.prof
+
+# Go workspace/vendor
+go.work
+vendor/
+
+# Local OS/editor files
+.DS_Store
+*.swp
