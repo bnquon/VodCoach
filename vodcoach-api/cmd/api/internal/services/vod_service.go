@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
+	"github.com/jackc/pgx/v5"
 )
 
 const maxVodUploadBytes int64 = 2 * 1024 * 1024 * 1024 // 2GB
@@ -35,7 +36,7 @@ type CreateVodUploadParams struct {
 
 type CreateVodUploadResult struct {
 	Vod                 *repository.Vod
-	UploadURL						string
+	UploadURL           string
 	OriginalStorageKey  string
 	ThumbnailStorageKey string
 }
@@ -45,6 +46,23 @@ func NewVodService(vodRepository *repository.VodRepository, storageService *Stor
 		vodRepository,
 		storageService,
 	}
+}
+
+func (s *VodService) GetVods(ctx context.Context, userID string) ([]repository.Vod, error) {
+	return s.vodRepository.GetByUserID(ctx, userID)
+}
+
+func (s *VodService) GetVod(ctx context.Context, vodID string, userID string) (*repository.Vod, error) {
+	vod, err := s.vodRepository.GetByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrVodAccessDenied
+		}
+
+		return nil, err
+	}
+
+	return vod, nil
 }
 
 func (s *VodService) CreateVodUpload(ctx context.Context, params CreateVodUploadParams) (*CreateVodUploadResult, error) {
@@ -92,10 +110,22 @@ func (s *VodService) CreateVodUpload(ctx context.Context, params CreateVodUpload
 
 	return &CreateVodUploadResult{
 		Vod:                 vod,
-		UploadURL: 					 uploadURL,
+		UploadURL:           uploadURL,
 		OriginalStorageKey:  originalStorageKey,
 		ThumbnailStorageKey: thumbnailStorageKey,
 	}, nil
+}
+
+func (s *VodService) CompleteVodUpload(ctx context.Context, vodID string, userID string) (*repository.Vod, error) {
+	ownsVod, err := s.vodRepository.UserOwnsVod(ctx, vodID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !ownsVod {
+		return nil, ErrVodAccessDenied
+	}
+
+	return s.vodRepository.MarkUploadComplete(ctx, vodID, userID)
 }
 
 func buildOriginalStorageKey(userID string, vodID string, fileName string) string {

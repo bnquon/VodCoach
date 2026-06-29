@@ -8,7 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const jwtTTL = 24 * time.Hour
+const jwtTTL = 7 * 24 * time.Hour
 
 type Claims struct {
 	UserID string `json:"user_id"`

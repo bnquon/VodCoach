@@ -78,6 +78,8 @@ Build:
 
 At this point, playing the original uploaded video directly is acceptable.
 
+Completed: June 28 ✅
+
 ## Phase 4: Redpanda + Worker Skeleton
 
 Add event-driven background processing without FFmpeg yet.

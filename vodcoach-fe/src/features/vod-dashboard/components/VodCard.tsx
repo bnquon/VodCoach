@@ -1,28 +1,52 @@
 import Link from "next/link";
 import { Badge, Paper, Stack, Text } from "@mantine/core";
-import { TEST_VOD_ID } from "@/features/vod-review/api";
+import { VOD_STATUS, type VodStatus } from "@/features/vod-dashboard/api";
 
-type VodStatus = "Ready" | "Processing" | "Failed";
+type DemoVodStatus = "Ready" | "Processing" | "Failed";
+type CardVodStatus = DemoVodStatus | VodStatus;
 
 type VodCardProps = {
   game: string;
   id: string;
-  status: VodStatus;
+  reviewVodID?: string;
+  status: CardVodStatus;
   title: string;
 };
 
-const statusColor: Record<VodStatus, string> = {
+const statusColor: Record<CardVodStatus, string> = {
   Ready: "green",
   Processing: "yellow",
   Failed: "red",
+  [VOD_STATUS.pendingUpload]: "yellow",
+  [VOD_STATUS.uploaded]: "blue",
+  [VOD_STATUS.processing]: "yellow",
+  [VOD_STATUS.ready]: "green",
+  [VOD_STATUS.failed]: "red",
 };
 
-export function VodCard({ game, status, title }: VodCardProps) {
+const statusLabel: Record<CardVodStatus, string> = {
+  Ready: "Ready",
+  Processing: "Processing",
+  Failed: "Failed",
+  [VOD_STATUS.pendingUpload]: "Pending upload",
+  [VOD_STATUS.uploaded]: "Uploaded",
+  [VOD_STATUS.processing]: "Processing",
+  [VOD_STATUS.ready]: "Ready",
+  [VOD_STATUS.failed]: "Failed",
+};
+
+export function VodCard({
+  game,
+  id,
+  reviewVodID = id,
+  status,
+  title,
+}: VodCardProps) {
   return (
     <Paper
       className="vc-card"
       component={Link}
-      href={`/vods/${TEST_VOD_ID}`}
+      href={`/vods/${reviewVodID}`}
       p="sm"
       radius="md"
       style={{ color: "inherit", textDecoration: "none" }}
@@ -43,7 +67,7 @@ export function VodCard({ game, status, title }: VodCardProps) {
             {game}
           </Text>
           <Badge color={statusColor[status]} variant="light" w="fit-content">
-            {status}
+            {statusLabel[status]}
           </Badge>
         </Stack>
       </Stack>

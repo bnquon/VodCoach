@@ -8,6 +8,10 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
+type JwtPayload = {
+  exp?: number;
+};
+
 const authTokenKey = "vodcoach.auth.token";
 const authUserKey = "vodcoach.auth.user";
 export const authStorageEvent = "vodcoach.auth.changed";
@@ -25,6 +29,16 @@ export function getAuthToken() {
   }
 
   return window.localStorage.getItem(authTokenKey);
+}
+
+export function isAuthTokenExpired(token: string) {
+  const payload = parseJwtPayload(token);
+
+  if (!payload?.exp) {
+    return true;
+  }
+
+  return payload.exp * 1000 <= Date.now();
 }
 
 export function getAuthUser() {
@@ -77,4 +91,29 @@ export function clearAuth() {
   cachedUserString = null;
   cachedUser = null;
   window.dispatchEvent(new Event(authStorageEvent));
+}
+
+function parseJwtPayload(token: string): JwtPayload | null {
+  const [, payload] = token.split(".");
+
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const normalizedPayload = padBase64(
+      payload.replace(/-/g, "+").replace(/_/g, "/"),
+    );
+    const decodedPayload = window.atob(normalizedPayload);
+
+    return JSON.parse(decodedPayload) as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
+function padBase64(value: string) {
+  const paddingLength = (4 - (value.length % 4)) % 4;
+
+  return value + "=".repeat(paddingLength);
 }

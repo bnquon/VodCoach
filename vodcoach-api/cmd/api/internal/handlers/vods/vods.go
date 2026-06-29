@@ -40,7 +40,7 @@ type VodResponse struct {
 
 type CreateVodUploadResponse struct {
 	Vod                 VodResponse `json:"vod"`
-	UploadURL 					string 			`json:"upload_url"`
+	UploadURL           string      `json:"upload_url"`
 	OriginalStorageKey  string      `json:"original_storage_key"`
 	ThumbnailStorageKey string      `json:"thumbnail_storage_key"`
 }
@@ -49,6 +49,41 @@ func NewVodHandler(vodService *services.VodService) *VodHandler {
 	return &VodHandler{
 		vodService: vodService,
 	}
+}
+
+func (h *VodHandler) GetVods(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+
+	vods, err := h.vodService.GetVods(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get VODs"})
+		return
+	}
+
+	response := make([]VodResponse, 0, len(vods))
+	for _, vod := range vods {
+		response = append(response, h.toVodResponse(vod))
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *VodHandler) GetVod(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	vod, err := h.vodService.GetVod(c.Request.Context(), vodID, userID)
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get VOD"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.toVodResponse(*vod))
 }
 
 func (h *VodHandler) CreateUpload(c *gin.Context) {
@@ -87,14 +122,32 @@ func (h *VodHandler) CreateUpload(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, CreateVodUploadResponse{
-		Vod:                 toVodResponse(*result.Vod),
-		UploadURL: 					 result.UploadURL,
+		Vod:                 h.toVodResponse(*result.Vod),
+		UploadURL:           result.UploadURL,
 		OriginalStorageKey:  result.OriginalStorageKey,
 		ThumbnailStorageKey: result.ThumbnailStorageKey,
 	})
 }
 
-func toVodResponse(vod repository.Vod) VodResponse {
+func (h *VodHandler) CompleteUpload(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	vod, err := h.vodService.CompleteVodUpload(c.Request.Context(), vodID, userID)
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete VOD upload"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.toVodResponse(*vod))
+}
+
+func (h *VodHandler) toVodResponse(vod repository.Vod) VodResponse {
 	return VodResponse{
 		ID:                  vod.ID,
 		Title:               vod.Title,

@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(pool *pgxpool.Pool, s3Client *s3.Client) *gin.Engine {
+func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client) *gin.Engine {
 	router := gin.Default()
 	router.Use(corsMiddleware())
 
@@ -28,7 +28,7 @@ func NewRouter(pool *pgxpool.Pool, s3Client *s3.Client) *gin.Engine {
 	vodRepository := repository.NewVodRepository(pool)
 
 	authService := services.NewAuthService(userRepository)
-	storageService := services.NewStorageService(s3Client)
+	storageService := services.NewStorageService(r2BucketName, s3Client)
 	vodService := services.NewVodService(vodRepository, storageService)
 	noteService := services.NewNoteService(noteRepository, vodRepository)
 	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
@@ -47,7 +47,10 @@ func NewRouter(pool *pgxpool.Pool, s3Client *s3.Client) *gin.Engine {
 
 	protected := router.Group("/")
 	protected.Use(authmiddleware.Middleware())
+	protected.GET("/vods", vodHandler.GetVods)
+	protected.GET("/vods/:vodID", vodHandler.GetVod)
 	protected.POST("/vods/upload", vodHandler.CreateUpload)
+	protected.POST("/vods/:vodID/upload-complete", vodHandler.CompleteUpload)
 	protected.GET("/vods/:vodID/notes", noteHandler.GetNotes)
 	protected.POST("/vods/:vodID/notes", noteHandler.CreateNote)
 	protected.PATCH("/vods/:vodID/notes/:noteID", noteHandler.UpdateNote)

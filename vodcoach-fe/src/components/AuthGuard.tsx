@@ -3,6 +3,7 @@
 import { ReactNode, useEffect } from "react";
 import { Center, Loader } from "@mantine/core";
 import { useRouter } from "next/navigation";
+import { clearAuth, isAuthTokenExpired } from "@/lib/auth-storage";
 import { useAuthToken } from "@/lib/use-auth";
 
 type AuthGuardProps = {
@@ -12,14 +13,19 @@ type AuthGuardProps = {
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const token = useAuthToken();
+  const isExpired = token ? isAuthTokenExpired(token) : false;
 
   useEffect(() => {
-    if (token === null) {
+    if (token === null || isExpired) {
+      if (isExpired) {
+        clearAuth();
+      }
+
       router.replace("/login");
     }
-  }, [router, token]);
+  }, [isExpired, router, token]);
 
-  if (!token) {
+  if (!token || isExpired) {
     return (
       <Center h="100vh">
         <Loader />

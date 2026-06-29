@@ -34,10 +34,11 @@ func main() {
 	defer pool.Close()
 
 	var accountId = os.Getenv("R2_ACCOUNT_ID")
+	var bucketName = os.Getenv("R2_BUCKET_NAME")
 	var accessKeyId = os.Getenv("R2_AK_ID")
 	var accessKeySecret = os.Getenv("R2_SAK")
 
-	if accountId == "" || accessKeyId == "" || accessKeySecret == "" {
+	if accountId == "" || bucketName == "" || accessKeyId == "" || accessKeySecret == "" {
 		log.Fatal("One of or more .env vars for R2 bucket connection is empty")
 	}
 
@@ -53,7 +54,7 @@ func main() {
 		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountId))
 	})
 
-	router := server.NewRouter(pool, client)
+	router := server.NewRouter(pool, bucketName, client)
 
 	if err := router.Run(":8080"); err != nil {
 		log.Fatal(err)

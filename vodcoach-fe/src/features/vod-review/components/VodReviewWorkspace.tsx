@@ -30,7 +30,7 @@ export function VodReviewWorkspace({
   videoId,
   vodTitle,
 }: VodReviewWorkspaceProps) {
-  // TODO: Use videoId once the VOD list is backed by the API. For now hooks use the hardcoded test VOD id.
+  // TODO: Use videoId when real video processing/playback is ready.
   void videoId;
 
   const { notes: fetchedNotes } = useVodNotes();
@@ -46,6 +46,20 @@ export function VodReviewWorkspace({
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [isTheatreMode, setIsTheatreMode] = useState(false);
   const videoPlayerRef = useRef<HTMLVideoElement | null>(null);
+
+  const handleSaveDrawingAnnotations = useCallback(
+    async (drawings: DrawingAnnotation[]): Promise<void> => {
+      await createDrawingsBatch.mutateAsync(
+        drawings.map((drawing) => ({
+          timestamp_seconds: drawing.timestampSeconds,
+          duration_seconds: drawing.durationSeconds,
+          color: drawing.drawingJson[0]?.color ?? DEFAULT_START_COLOR,
+          drawing_json: drawing.drawingJson,
+        })),
+      );
+    },
+    [createDrawingsBatch],
+  );
 
   function handleTimestampClick(timestampSeconds: number) {
     const video = videoPlayerRef.current;
@@ -110,20 +124,6 @@ export function VodReviewWorkspace({
       tags: note.tags,
     });
   }
-
-  const handleSaveDrawingAnnotations = useCallback(
-    async (drawings: DrawingAnnotation[]): Promise<void> => {
-      await createDrawingsBatch.mutateAsync(
-        drawings.map((drawing) => ({
-          timestamp_seconds: drawing.timestampSeconds,
-          duration_seconds: drawing.durationSeconds,
-          color: drawing.drawingJson[0]?.color ?? DEFAULT_START_COLOR,
-          drawing_json: drawing.drawingJson,
-        })),
-      );
-    },
-    [createDrawingsBatch],
-  );
 
   return (
     <Stack gap="xl">
