@@ -229,6 +229,23 @@ func (r *VodRepository) MarkUploadComplete(ctx context.Context, vodID string, us
 	return &vod, nil
 }
 
+func (r *VodRepository) UpdateStatus(ctx context.Context, vodID string, status string) error {
+	_, err := r.pool.Exec(
+		ctx,
+		`UPDATE vods
+		SET status = $2,
+			updated_at = now()
+		WHERE id = $1`,
+		vodID,
+		status,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *VodRepository) UserOwnsVod(ctx context.Context, vodID string, userID string) (bool, error) {
 	var ownsVod bool
 

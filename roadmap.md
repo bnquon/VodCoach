@@ -104,6 +104,8 @@ Done when:
 
 Do not add video processing yet.
 
+Completed: June 29 ✅
+
 ## Phase 5: FFprobe + Thumbnail
 
 Make the worker useful.
