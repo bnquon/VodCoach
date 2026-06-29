@@ -51,6 +51,12 @@ func main() {
 	defer client.Close()
 
 	vodRepository := repository.NewVodRepository(pool)
+	log.Printf(
+		"worker started: brokers=%s group=%s topic=%s",
+		strings.Join(brokers, ","),
+		workerConsumerGroup,
+		events.VodUploadedTopic,
+	)
 
 	for {
 		fetches := client.PollFetches(ctx)
@@ -74,6 +80,7 @@ func main() {
 				log.Printf("failed to decode vod uploaded event: %v", err)
 				continue
 			}
+			log.Printf("received vod.uploaded: vod_id=%s user_id=%s", event.VodID, event.UserID)
 
 			if err := processVodUploaded(ctx, vodRepository, event); err != nil {
 				log.Printf("failed to process vod uploaded event for vod %s: %v", event.VodID, err)
@@ -84,13 +91,21 @@ func main() {
 }
 
 func processVodUploaded(ctx context.Context, vodRepository *repository.VodRepository, event events.VodUploadedEvent) error {
+	log.Printf("marking vod processing: vod_id=%s", event.VodID)
 	if err := vodRepository.UpdateStatus(ctx, event.VodID, "processing"); err != nil {
 		return err
 	}
 
 	// Phase 4 only proves that background processing works. Later phases replace
 	// this sleep with ffprobe, thumbnail generation, and preview video creation.
+	log.Printf("simulating processing work: vod_id=%s duration=3s", event.VodID)
 	time.Sleep(3 * time.Second)
 
-	return vodRepository.UpdateStatus(ctx, event.VodID, "ready")
+	log.Printf("marking vod ready: vod_id=%s", event.VodID)
+	if err := vodRepository.UpdateStatus(ctx, event.VodID, "ready"); err != nil {
+		return err
+	}
+
+	log.Printf("finished vod.uploaded: vod_id=%s", event.VodID)
+	return nil
 }

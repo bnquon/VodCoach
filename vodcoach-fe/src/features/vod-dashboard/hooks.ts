@@ -7,6 +7,7 @@ export function useVods() {
   return useQuery({
     queryKey: vodsQueryKey,
     queryFn: getVods,
+    refetchInterval: 3000,
   });
 }
 
