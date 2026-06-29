@@ -3,8 +3,10 @@
 import { useRouter } from "next/navigation";
 import {
   Button,
+  Center,
   Container,
   Group,
+  Loader,
   Paper,
   Select,
   SimpleGrid,
@@ -15,35 +17,16 @@ import {
 } from "@mantine/core";
 import { DashboardUploadCard } from "./DashboardUploadCard";
 import { VodCard } from "./VodCard";
+import { useAddVodToCache, useVods } from "@/features/vod-dashboard/hooks";
 import { clearAuth } from "@/lib/auth-storage";
 import { useAuthUser } from "@/lib/use-auth";
-
-const recentVods = [
-  { id: "match-1", title: "Match 1", game: "Valorant", status: "Ready" },
-  {
-    id: "match-2",
-    title: "Match 2",
-    game: "Apex Legends",
-    status: "Processing",
-  },
-  { id: "match-3", title: "Match 3", game: "Overwatch 2", status: "Failed" },
-] as const;
-
-const allVods = [
-  ...recentVods,
-  { id: "match-4", title: "Ranked Review", game: "Valorant", status: "Ready" },
-  {
-    id: "match-5",
-    title: "Scrim Set",
-    game: "Counter-Strike 2",
-    status: "Processing",
-  },
-  { id: "match-6", title: "Endgame Review", game: "Fortnite", status: "Ready" },
-] as const;
 
 export function HomeDashboard() {
   const router = useRouter();
   const user = useAuthUser();
+  const { data: vods = [], error, isLoading } = useVods();
+  const addVodToCache = useAddVodToCache();
+  const recentVods = vods.slice(0, 3);
 
   function handleLogout() {
     clearAuth();
@@ -72,17 +55,18 @@ export function HomeDashboard() {
 
       <Container size="xl" py="xl">
         <Stack gap="xl">
-          <DashboardUploadCard />
+          <DashboardUploadCard onUploadComplete={addVodToCache} />
 
           <Stack gap="md">
             <Title order={2} size="h3">
               Recently updated
             </Title>
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-              {recentVods.map((vod) => (
-                <VodCard key={vod.id} {...vod} />
-              ))}
-            </SimpleGrid>
+            <VodGrid
+              emptyMessage="No recently updated VODs yet."
+              error={error}
+              isLoading={isLoading}
+              vods={recentVods}
+            />
           </Stack>
 
           <Stack gap="md">
@@ -99,14 +83,71 @@ export function HomeDashboard() {
                 />
               </Group>
             </Group>
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-              {allVods.map((vod) => (
-                <VodCard key={vod.id} {...vod} />
-              ))}
-            </SimpleGrid>
+            <VodGrid
+              emptyMessage="Upload your first VOD to see it here."
+              error={error}
+              isLoading={isLoading}
+              vods={vods}
+            />
           </Stack>
         </Stack>
       </Container>
     </main>
+  );
+}
+
+type VodGridProps = {
+  emptyMessage: string;
+  error: Error | null;
+  isLoading: boolean;
+  vods: Array<{
+    game: string;
+    id: string;
+    status: Parameters<typeof VodCard>[0]["status"];
+    title: string;
+  }>;
+};
+
+function VodGrid({ emptyMessage, error, isLoading, vods }: VodGridProps) {
+  if (isLoading) {
+    return (
+      <Center className="vc-card" h={160}>
+        <Loader size="sm" />
+      </Center>
+    );
+  }
+
+  if (error) {
+    return (
+      <Paper className="vc-card" p="md" radius="md">
+        <Text size="sm" c="red">
+          Failed to load VODs
+        </Text>
+      </Paper>
+    );
+  }
+
+  if (vods.length === 0) {
+    return (
+      <Paper className="vc-card" p="md" radius="md">
+        <Text size="sm" c="dimmed">
+          {emptyMessage}
+        </Text>
+      </Paper>
+    );
+  }
+
+  return (
+    <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
+      {vods.map((vod) => (
+        <VodCard
+          key={vod.id}
+          game={vod.game}
+          id={vod.id}
+          status={vod.status}
+          title={vod.title}
+        />
+      ))}
+    </SimpleGrid>
   );
 }
