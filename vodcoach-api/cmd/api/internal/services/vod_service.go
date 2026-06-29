@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bnquon/vodcoach-api/cmd/api/internal/events"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
 	"github.com/jackc/pgx/v5"
 )
@@ -23,6 +24,7 @@ var (
 type VodService struct {
 	vodRepository  *repository.VodRepository
 	storageService *StorageService
+	eventPublisher events.Publisher
 }
 
 type CreateVodUploadParams struct {
@@ -41,10 +43,11 @@ type CreateVodUploadResult struct {
 	ThumbnailStorageKey string
 }
 
-func NewVodService(vodRepository *repository.VodRepository, storageService *StorageService) *VodService {
+func NewVodService(vodRepository *repository.VodRepository, storageService *StorageService, eventPublisher events.Publisher) *VodService {
 	return &VodService{
 		vodRepository,
 		storageService,
+		eventPublisher,
 	}
 }
 
@@ -125,7 +128,23 @@ func (s *VodService) CompleteVodUpload(ctx context.Context, vodID string, userID
 		return nil, ErrVodAccessDenied
 	}
 
-	return s.vodRepository.MarkUploadComplete(ctx, vodID, userID)
+	vod, err := s.vodRepository.MarkUploadComplete(ctx, vodID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// This hands the slow post-upload work to the worker. The worker consumes
+	// vod.uploaded and updates this same VOD row through Postgres.
+	if err := s.eventPublisher.PublishVodUploaded(ctx, events.VodUploadedEvent{
+		VodID:              vod.ID,
+		UserID:             vod.UserID,
+		OriginalStorageKey: vod.OriginalStorageKey,
+		UploadedAt:         vod.UpdatedAt,
+	}); err != nil {
+		return nil, err
+	}
+
+	return vod, nil
 }
 
 func buildOriginalStorageKey(userID string, vodID string, fileName string) string {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	authmiddleware "github.com/bnquon/vodcoach-api/cmd/api/internal/auth"
+	"github.com/bnquon/vodcoach-api/cmd/api/internal/events"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/health"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/notes"
@@ -15,7 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client) *gin.Engine {
+func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client, eventPublisher events.Publisher) *gin.Engine {
 	router := gin.Default()
 	router.Use(corsMiddleware())
 
@@ -29,7 +30,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client) *gi
 
 	authService := services.NewAuthService(userRepository)
 	storageService := services.NewStorageService(r2BucketName, s3Client)
-	vodService := services.NewVodService(vodRepository, storageService)
+	vodService := services.NewVodService(vodRepository, storageService, eventPublisher)
 	noteService := services.NewNoteService(noteRepository, vodRepository)
 	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
 
