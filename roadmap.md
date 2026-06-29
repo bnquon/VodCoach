@@ -104,7 +104,7 @@ Done when:
 
 Do not add video processing yet.
 
-Comp
+Completed: June 29 ✅
 
 ## Phase 5: FFprobe + Thumbnail
 
@@ -126,8 +126,6 @@ Done when:
 * dashboard shows real metadata
 * dashboard shows generated thumbnail
 * failed videos show an error
-
-Completed: June 29 ✅
 
 ## Phase 6: Preview Video
 
