@@ -17,6 +17,7 @@ import {
   type NoteDTO,
   type NoteKind,
 } from "./api";
+import { reviewSyncQueryOptions } from "./query-options";
 
 type CreateVodNoteInput = {
   noteKind: NoteKind;
@@ -36,6 +37,7 @@ export function useVodNotes(vodID: string) {
   const query = useQuery({
     queryKey: vodNotesQueryKey(vodID),
     queryFn: () => getVodNotes(vodID),
+    ...reviewSyncQueryOptions,
   });
   const [notes, requestError] = query.data ?? [null, null];
 
@@ -78,6 +80,7 @@ export function useCreateVodNote(vodID: string) {
       const optimisticNote: NoteDTO = {
         id: optimisticNoteID,
         vod_id: vodID,
+        guest_name: null,
         note_kind: input.noteKind,
         timestamp_seconds: input.timestampSeconds,
         note_text: input.noteText,
@@ -220,6 +223,7 @@ export function useVodAnnotations(vodID: string) {
   const query = useQuery({
     queryKey: vodAnnotationsQueryKey(vodID),
     queryFn: () => getVodAnnotations(vodID),
+    ...reviewSyncQueryOptions,
   });
   const [annotations, requestError] = query.data ?? [null, null];
 

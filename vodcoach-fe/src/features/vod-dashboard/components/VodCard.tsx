@@ -31,7 +31,7 @@ const statusColor: Record<CardVodStatus, string> = {
   Processing: "yellow",
   Failed: "red",
   [VOD_STATUS.pendingUpload]: "yellow",
-  [VOD_STATUS.uploaded]: "blue",
+  [VOD_STATUS.uploaded]: "vodcoachOrange",
   [VOD_STATUS.processing]: "yellow",
   [VOD_STATUS.ready]: "green",
   [VOD_STATUS.failed]: "red",

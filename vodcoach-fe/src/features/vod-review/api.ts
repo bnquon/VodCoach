@@ -19,6 +19,7 @@ export type NoteKind = (typeof NOTE_KIND)[keyof typeof NOTE_KIND];
 export type NoteDTO = {
   id: string;
   vod_id: string;
+  guest_name: string | null;
   note_kind: NoteKind;
   timestamp_seconds: number | null;
   note_text: string;
@@ -28,6 +29,7 @@ export type NoteDTO = {
 export type DrawingDTO = {
   id: string;
   vod_id: string;
+  guest_name: string | null;
   timestamp_seconds: number;
   duration_seconds: number;
   color: string;

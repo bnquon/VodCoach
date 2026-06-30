@@ -17,6 +17,7 @@ import {
 import { PencilLine } from "lucide-react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { useUpdateVod, useVod } from "@/features/vod-dashboard/hooks";
+import { ShareVodModal } from "./ShareVodModal";
 import { VodReviewWorkspace } from "./VodReviewWorkspace";
 
 interface VodReviewPageClientProps {
@@ -28,6 +29,7 @@ export function VodReviewPageClient({ vodId }: VodReviewPageClientProps) {
   const updateVod = useUpdateVod();
   const vodTitle = vod?.title ?? (isLoading ? "Loading VOD..." : "VOD Review");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const canSaveTitle = draftTitle.trim().length > 0;
 
@@ -59,7 +61,7 @@ export function VodReviewPageClient({ vodId }: VodReviewPageClientProps) {
 
   return (
     <AuthGuard>
-      <main>
+      <main className="vc-review-page">
         <Container size="xl" py="xl">
           <Stack gap="xl">
             <Stack gap={4}>
@@ -97,17 +99,26 @@ export function VodReviewPageClient({ vodId }: VodReviewPageClientProps) {
                   </Button>
                 </Group>
               ) : (
-                <Group align="center" gap="xs">
-                  <Title order={1}>{vodTitle}</Title>
-                  <ActionIcon
-                    aria-label="Edit VOD title"
+                <Group align="center" justify="space-between">
+                  <Group align="center" gap="xs">
+                    <Title order={1}>{vodTitle}</Title>
+                    <ActionIcon
+                      aria-label="Edit VOD title"
+                      disabled={!vod}
+                      size="sm"
+                      variant="subtle"
+                      onClick={handleStartTitleEdit}
+                    >
+                      <PencilLine size={16} strokeWidth={2} />
+                    </ActionIcon>
+                  </Group>
+                  <Button
                     disabled={!vod}
-                    size="sm"
-                    variant="subtle"
-                    onClick={handleStartTitleEdit}
+                    variant="light"
+                    onClick={() => setIsShareModalOpen(true)}
                   >
-                    <PencilLine size={16} strokeWidth={2} />
-                  </ActionIcon>
+                    Share
+                  </Button>
                 </Group>
               )}
               {error ? (
@@ -121,6 +132,11 @@ export function VodReviewPageClient({ vodId }: VodReviewPageClientProps) {
             <VodReviewWorkspace videoId={vodId} />
           </Stack>
         </Container>
+        <ShareVodModal
+          opened={isShareModalOpen}
+          vodID={vodId}
+          onClose={() => setIsShareModalOpen(false)}
+        />
       </main>
     </AuthGuard>
   );

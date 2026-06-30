@@ -31,7 +31,10 @@ func (s *NoteService) GetNotes(ctx context.Context, vodID string, userID string)
 }
 
 func (s *NoteService) CreateNote(ctx context.Context, params repository.CreateNoteParams) (*repository.Note, error) {
-	if err := s.requireVodOwner(ctx, params.VodID, params.UserID); err != nil {
+	if params.UserID == nil {
+		return nil, ErrVodAccessDenied
+	}
+	if err := s.requireVodOwner(ctx, params.VodID, *params.UserID); err != nil {
 		return nil, err
 	}
 

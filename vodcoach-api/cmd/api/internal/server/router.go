@@ -10,6 +10,7 @@ import (
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/debug"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/health"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/notes"
+	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/shares"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/vods"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/services"
@@ -28,6 +29,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	noteRepository := repository.NewNoteRepository(pool)
 	drawingRepository := repository.NewDrawingRepository(pool)
 	vodRepository := repository.NewVodRepository(pool)
+	vodShareRepository := repository.NewVodShareRepository(pool)
 
 	authService := services.NewAuthService(userRepository)
 	storageService := services.NewStorageService(r2BucketName, s3Client)
@@ -35,6 +37,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	vodService := services.NewVodService(vodRepository, storageService, thumbnailStorageService, eventPublisher)
 	noteService := services.NewNoteService(noteRepository, vodRepository)
 	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
+	shareService := services.NewShareService(vodRepository, vodShareRepository, noteRepository, drawingRepository, storageService)
 
 	registerHandler := auth.NewRegisterHandler(authService)
 	loginHandler := auth.NewLoginHandler(authService)
@@ -42,12 +45,14 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	vodHandler := vods.NewVodHandler(vodService)
 	noteHandler := notes.NewNoteHandler(noteService)
 	annotationHandler := notes.NewAnnotationHandler(annotationService)
+	shareHandler := shares.NewShareHandler(shareService)
 
 	router.GET("/health", appHealthHandler.Health)
 	router.GET("/health/db", dbHealthHandler.Health)
 
 	router.POST("/register", registerHandler.Register)
 	router.POST("/login", loginHandler.Login)
+	router.POST("/shares/:shareToken/session", shareHandler.CreateShareSession)
 
 	protected := router.Group("/")
 	protected.Use(authmiddleware.Middleware())
@@ -58,6 +63,9 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	protected.POST("/vods/upload", vodHandler.CreateUpload)
 	protected.POST("/vods/:vodID/upload-complete", vodHandler.CompleteUpload)
 	protected.DELETE("/vods/:vodID", vodHandler.DeleteVod)
+	protected.POST("/vods/:vodID/shares", shareHandler.CreateShare)
+	protected.GET("/vods/:vodID/shares", shareHandler.GetShares)
+	protected.DELETE("/vods/:vodID/shares/:shareID", shareHandler.RevokeShare)
 	protected.GET("/vods/:vodID/notes", noteHandler.GetNotes)
 	protected.POST("/vods/:vodID/notes", noteHandler.CreateNote)
 	protected.PATCH("/vods/:vodID/notes/:noteID", noteHandler.UpdateNote)
@@ -66,6 +74,15 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	protected.POST("/vods/:vodID/annotations", annotationHandler.CreateAnnotation)
 	protected.POST("/vods/:vodID/annotations/batch", annotationHandler.CreateAnnotationsBatch)
 	protected.POST("/debug/ffprobe", ffprobeHandler.Probe)
+
+	shared := router.Group("/shares")
+	shared.Use(authmiddleware.ShareMiddleware())
+	shared.GET("/vod", shareHandler.GetSharedVod)
+	shared.GET("/playback-url", shareHandler.GetSharedPlaybackURL)
+	shared.GET("/notes", shareHandler.GetSharedNotes)
+	shared.GET("/annotations", shareHandler.GetSharedAnnotations)
+	shared.POST("/notes", shareHandler.CreateSharedNote)
+	shared.POST("/annotations/batch", shareHandler.CreateSharedAnnotationsBatch)
 
 	return router
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AspectRatio, Box, Paper, Stack, Text } from "@mantine/core";
+import { AspectRatio, Box, Paper, Stack } from "@mantine/core";
 import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { Circle, Layer, Line, Rect, Stage } from "react-konva";
@@ -31,6 +31,7 @@ import {
 import { DrawingToolbar } from "./DrawingToolbar";
 
 type UploadedVideoPlayerProps = {
+  canDraw?: boolean;
   drawingAnnotations: DrawingAnnotation[];
   isTheatreMode: boolean;
   src: string;
@@ -44,6 +45,7 @@ type UploadedVideoPlayerProps = {
 };
 
 export function UploadedVideoPlayer({
+  canDraw = true,
   drawingAnnotations,
   isTheatreMode,
   onDurationChange,
@@ -103,7 +105,7 @@ export function UploadedVideoPlayer({
   }, [localDrawingAnnotations, onSaveDrawingAnnotations]);
 
   function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
-    if (!isDrawingModeEnabled) {
+    if (!canDraw || !isDrawingModeEnabled) {
       return;
     }
 
@@ -167,7 +169,7 @@ export function UploadedVideoPlayer({
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {
-    if (!isDrawingModeEnabled || !isDrawing.current) {
+    if (!canDraw || !isDrawingModeEnabled || !isDrawing.current) {
       return;
     }
 
@@ -294,8 +296,9 @@ export function UploadedVideoPlayer({
       <Stack gap="sm">
         <Stack gap="sm">
           <DrawingToolbar
+            canDraw={canDraw}
             color={drawingColor}
-            drawingModeEnabled={isDrawingModeEnabled}
+            drawingModeEnabled={canDraw ? isDrawingModeEnabled : false}
             isTheatreMode={isTheatreMode}
             showDrawings={showDrawings}
             strokeWidth={strokeWidth}
@@ -325,7 +328,7 @@ export function UploadedVideoPlayer({
             pos="absolute"
             inset={0}
             style={{
-              pointerEvents: isDrawingModeEnabled ? "auto" : "none",
+              pointerEvents: canDraw && isDrawingModeEnabled ? "auto" : "none",
             }}
           >
             <Stage

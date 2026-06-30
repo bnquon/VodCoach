@@ -13,6 +13,7 @@ import (
 type NoteResponse struct {
 	ID               string   `json:"id"`
 	VodID            string   `json:"vod_id"`
+	GuestName        *string  `json:"guest_name"`
 	NoteKind         string   `json:"note_kind"`
 	TimestampSeconds *int     `json:"timestamp_seconds"`
 	NoteText         string   `json:"note_text"`
@@ -46,6 +47,7 @@ func toNoteResponse(note repository.Note) NoteResponse {
 	return NoteResponse{
 		ID:               note.ID,
 		VodID:            note.VodID,
+		GuestName:        note.GuestName,
 		NoteKind:         note.NoteKind,
 		TimestampSeconds: note.TimestampSeconds,
 		NoteText:         note.NoteText,
@@ -83,7 +85,7 @@ func (h *NoteHandler) CreateNote(c *gin.Context) {
 
 	note, err := h.noteService.CreateNote(c.Request.Context(), repository.CreateNoteParams{
 		VodID:            vodID,
-		UserID:           userID,
+		UserID:           &userID,
 		NoteKind:         body.NoteKind,
 		TimestampSeconds: body.TimestampSeconds,
 		NoteText:         body.NoteText,

@@ -196,6 +196,43 @@ func (r *VodRepository) GetByIDAndUserID(ctx context.Context, vodID string, user
 	return &vod, nil
 }
 
+func (r *VodRepository) GetByID(ctx context.Context, vodID string) (*Vod, error) {
+	var vod Vod
+
+	err := r.pool.QueryRow(
+		ctx,
+		`SELECT id, user_id, title, game, original_storage_key, thumbnail_storage_key,
+			original_filename, content_type, duration_seconds, width, height, status, processing_progress,
+			error_message, created_at, updated_at
+		FROM vods
+		WHERE id = $1
+		`,
+		vodID,
+	).Scan(
+		&vod.ID,
+		&vod.UserID,
+		&vod.Title,
+		&vod.Game,
+		&vod.OriginalStorageKey,
+		&vod.ThumbnailStorageKey,
+		&vod.OriginalFilename,
+		&vod.ContentType,
+		&vod.DurationSeconds,
+		&vod.Width,
+		&vod.Height,
+		&vod.Status,
+		&vod.ProcessingProgress,
+		&vod.ErrorMessage,
+		&vod.CreatedAt,
+		&vod.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vod, nil
+}
+
 func (r *VodRepository) MarkUploadComplete(ctx context.Context, vodID string, userID string) (*Vod, error) {
 	var vod Vod
 

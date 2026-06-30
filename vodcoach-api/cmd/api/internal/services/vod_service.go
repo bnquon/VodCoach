@@ -14,7 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const maxVodUploadBytes int64 = 2 * 1024 * 1024 * 1024 // 2GB
+const maxVodUploadBytes int64 = 500 * 1024 * 1024 // 500MB
 
 var (
 	ErrInvalidVodUploadContentType = errors.New("invalid vod upload content type")

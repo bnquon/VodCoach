@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { type MouseEvent, useState } from "react";
 import {
+  ActionIcon,
+  Box,
   Button,
   Group,
   Paper,
@@ -10,9 +12,11 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { Dropzone, MIME_TYPES, type FileWithPath } from "@mantine/dropzone";
 import { useMutation } from "@tanstack/react-query";
+import { CircleX } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   completeVodUpload,
@@ -35,6 +39,10 @@ const UPLOAD_STAGE = {
 type UploadStage = (typeof UPLOAD_STAGE)[keyof typeof UPLOAD_STAGE];
 
 const DEFAULT_VIDEO_CONTENT_TYPE = "video/mp4";
+const MAX_UPLOAD_SIZE_BYTES = 500 * 1024 * 1024;
+const MAX_UPLOAD_SIZE_LABEL = "500 MB";
+const FILE_SIZE_TOOLTIP =
+  "This VOD is too large. Compress it with an online video compressor or trim it before uploading.";
 
 function getUploadStatusText(
   uploadStage: UploadStage,
@@ -68,6 +76,10 @@ function getUploadProgressValue(
   }
 }
 
+function formatFileSize(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export function DashboardUploadCard({
   onUploadComplete,
 }: DashboardUploadCardProps) {
@@ -83,6 +95,10 @@ export function DashboardUploadCard({
     mutationFn: async () => {
       if (!selectedFile) {
         throw new Error("Select an MP4 file before uploading");
+      }
+
+      if (selectedFile.size > MAX_UPLOAD_SIZE_BYTES) {
+        throw new Error(`VOD must be ${MAX_UPLOAD_SIZE_LABEL} or smaller`);
       }
 
       const contentType = selectedFile.type || DEFAULT_VIDEO_CONTENT_TYPE;
@@ -126,7 +142,11 @@ export function DashboardUploadCard({
     },
   });
 
-  const canUpload = Boolean(selectedFile && title.trim() && game.trim());
+  const isSelectedFileTooLarge =
+    selectedFile !== null && selectedFile.size > MAX_UPLOAD_SIZE_BYTES;
+  const canUpload = Boolean(
+    selectedFile && title.trim() && game.trim() && !isSelectedFileTooLarge,
+  );
   const isUploading = uploadMutation.isPending;
   const uploadStatusText = getUploadStatusText(
     uploadStage,
@@ -136,6 +156,14 @@ export function DashboardUploadCard({
 
   function handleFileDrop(files: FileWithPath[]) {
     setSelectedFile(files[0] ?? null);
+    setUploadProgress(0);
+    setUploadStage(UPLOAD_STAGE.idle);
+  }
+
+  function handleClearFile(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedFile(null);
     setUploadProgress(0);
     setUploadStage(UPLOAD_STAGE.idle);
   }
@@ -153,7 +181,7 @@ export function DashboardUploadCard({
             </Text>
           </Stack>
           <Text size="xs" fw={700} c="dimmed">
-            MP4 only
+            MP4 only · max {MAX_UPLOAD_SIZE_LABEL}
           </Text>
         </Group>
 
@@ -167,12 +195,39 @@ export function DashboardUploadCard({
         >
           <Group justify="center" mih={112} p="md">
             <Stack gap={4} align="center">
-              <Text fw={600}>
-                {selectedFile ? selectedFile.name : "Select an MP4 file"}
-              </Text>
+              {selectedFile ? (
+                <Group gap={6} justify="center" wrap="nowrap">
+                  <Text fw={600} lineClamp={1}>
+                    {selectedFile.name}
+                  </Text>
+                  <Tooltip label="Clear selected file" withArrow>
+                    <ActionIcon
+                      aria-label="Clear selected file"
+                      className="vc-upload-clear-button"
+                      disabled={isUploading}
+                      size="sm"
+                      variant="subtle"
+                      onClick={handleClearFile}
+                    >
+                      <CircleX size={18} strokeWidth={2} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              ) : (
+                <Text fw={600}>Select an MP4 file</Text>
+              )}
               <Text size="xs" c="dimmed">
                 {uploadStatusText}
               </Text>
+              {selectedFile ? (
+                <Text
+                  size="xs"
+                  c={isSelectedFileTooLarge ? "red" : "dimmed"}
+                  fw={isSelectedFileTooLarge ? 700 : 400}
+                >
+                  {formatFileSize(selectedFile.size)} / {MAX_UPLOAD_SIZE_LABEL}
+                </Text>
+              ) : null}
             </Stack>
           </Group>
         </Dropzone>
@@ -201,15 +256,23 @@ export function DashboardUploadCard({
           />
         </Stack>
 
-        <Button
-          disabled={!canUpload}
-          fullWidth
-          loading={isUploading}
-          mt="auto"
-          onClick={() => uploadMutation.mutate()}
+        <Tooltip
+          disabled={!isSelectedFileTooLarge}
+          label={FILE_SIZE_TOOLTIP}
+          multiline
+          withArrow
         >
-          Upload
-        </Button>
+          <Box component="span" display="block" mt="auto">
+            <Button
+              disabled={!canUpload}
+              fullWidth
+              loading={isUploading}
+              onClick={() => uploadMutation.mutate()}
+            >
+              Upload
+            </Button>
+          </Box>
+        </Tooltip>
       </Stack>
     </Paper>
   );

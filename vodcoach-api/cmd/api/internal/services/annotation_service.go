@@ -47,7 +47,10 @@ func (s *AnnotationService) GetAnnotations(ctx context.Context, vodID string, us
 }
 
 func (s *AnnotationService) CreateDrawing(ctx context.Context, params repository.CreateDrawingParams) (*repository.Drawing, error) {
-	if err := s.requireVodOwner(ctx, params.VodID, params.UserID); err != nil {
+	if params.UserID == nil {
+		return nil, ErrVodAccessDenied
+	}
+	if err := s.requireVodOwner(ctx, params.VodID, *params.UserID); err != nil {
 		return nil, err
 	}
 
@@ -59,7 +62,10 @@ func (s *AnnotationService) CreateDrawings(ctx context.Context, params []reposit
 		return []repository.Drawing{}, nil
 	}
 
-	if err := s.requireVodOwner(ctx, params[0].VodID, params[0].UserID); err != nil {
+	if params[0].UserID == nil {
+		return nil, ErrVodAccessDenied
+	}
+	if err := s.requireVodOwner(ctx, params[0].VodID, *params[0].UserID); err != nil {
 		return nil, err
 	}
 
