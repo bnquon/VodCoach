@@ -42,6 +42,13 @@ type CreateVodParams struct {
 	ContentType         string
 }
 
+type CompleteVodProcessingParams struct {
+	VodID           string
+	DurationSeconds int
+	Width           int
+	Height          int
+}
+
 func NewVodRepository(pool *pgxpool.Pool) *VodRepository {
 	return &VodRepository{
 		pool,
@@ -238,6 +245,30 @@ func (r *VodRepository) UpdateStatus(ctx context.Context, vodID string, status s
 		WHERE id = $1`,
 		vodID,
 		status,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *VodRepository) CompleteProcessing(ctx context.Context, params CompleteVodProcessingParams) error {
+	_, err := r.pool.Exec(
+		ctx,
+		`UPDATE vods
+		SET status = 'ready',
+			duration_seconds = $2,
+			width = $3,
+			height = $4,
+			processing_progress = 100,
+			error_message = NULL,
+			updated_at = now()
+		WHERE id = $1`,
+		params.VodID,
+		params.DurationSeconds,
+		params.Width,
+		params.Height,
 	)
 	if err != nil {
 		return err

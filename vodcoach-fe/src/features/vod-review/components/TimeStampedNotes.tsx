@@ -15,6 +15,7 @@ import {
 } from "@mantine/core";
 import { useState } from "react";
 import type { TimestampedNote } from "../types";
+import { NotesEmptyState } from "./NotesEmptyState";
 
 type TimeStampedNotesProps = {
   currentTimeSeconds: number;
@@ -210,6 +211,8 @@ export function TimeStampedNotes({
                 </Button>
               </Group>
             </Stack>
+          ) : sortedNotes.length === 0 ? (
+            <NotesEmptyState message="No timestamped notes yet." />
           ) : (
             <Stack gap={6}>
               {sortedNotes.map((note) => (

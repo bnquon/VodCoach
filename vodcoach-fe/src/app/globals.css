@@ -31,6 +31,116 @@ body {
   background-attachment: fixed;
 }
 
+.vc-dashboard-app {
+  width: min(100%, 1360px);
+  margin: 0 auto;
+  padding: 0 28px 56px;
+}
+
+.vc-dashboard-topbar {
+  min-height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 34px;
+}
+
+.vc-dashboard-user-nav {
+  gap: 20px;
+}
+
+.vc-dashboard-heading {
+  margin-bottom: -4px;
+}
+
+.vc-dashboard-top-grid {
+  display: grid;
+  grid-template-columns: 395px minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.vc-upload-card,
+.vc-recent-panel {
+  min-height: 384px;
+}
+
+.vc-recent-panel {
+  padding: 22px;
+  width: 100%;
+}
+
+.vc-section-title {
+  margin-bottom: 17px;
+}
+
+.vc-recent-list {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  justify-content: stretch;
+}
+
+.vc-recent-vod-row {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid var(--vc-border);
+  padding: 12px;
+  justify-self: stretch;
+  width: 100%;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 10px 24px rgb(0 0 0 / 18%);
+}
+
+.vc-recent-thumbnail {
+  width: 132px;
+  height: 74px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.vc-recent-progress {
+  width: min(210px, 100%);
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--vc-elevated-card);
+}
+
+.vc-recent-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: currentcolor;
+}
+
+.vc-dashboard-library {
+  margin-top: 8px;
+}
+
+.vc-library-header {
+  gap: 18px;
+}
+
+.vc-dashboard-filters {
+  align-items: center;
+}
+
+.vc-dashboard-filters .mantine-InputWrapper-root:first-child {
+  width: 260px;
+}
+
+.vc-dashboard-filters .mantine-InputWrapper-root:last-child {
+  width: 170px;
+}
+
+.vc-vod-grid {
+  gap: 18px;
+}
+
 .vc-card,
 .vc-elevated-card,
 .vc-topbar {
@@ -68,16 +178,37 @@ a.vc-card:hover {
 }
 
 .vc-thumbnail {
+  aspect-ratio: 16 / 9;
   background:
     linear-gradient(135deg, rgb(229 231 235 / 8%), transparent),
     var(--vc-elevated-card);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%);
+  overflow: hidden;
+}
+
+.vc-thumbnail-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .mantine-Input-input {
   background: var(--vc-elevated-card);
-  border-color: transparent;
+  border-color: var(--vc-border);
+  border-width: 1px;
   color: var(--vc-text);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 0 0 1px rgb(255 255 255 / 3%);
+}
+
+.mantine-Input-input:focus,
+.mantine-Input-input:focus-within {
+  border-color: #5a5a5a;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 6%),
+    0 0 0 2px rgb(245 245 245 / 10%);
 }
 
 .mantine-Input-input::placeholder {
@@ -92,4 +223,57 @@ a.vc-card:hover {
 .mantine-Breadcrumbs-separator,
 .mantine-Text-root[data-dimmed] {
   color: var(--vc-muted);
+}
+
+@media (max-width: 1000px) {
+  .vc-dashboard-top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vc-library-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .vc-dashboard-filters .mantine-InputWrapper-root:first-child,
+  .vc-dashboard-filters .mantine-InputWrapper-root:last-child {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .vc-dashboard-app {
+    padding: 0 16px 40px;
+  }
+
+  .vc-dashboard-topbar {
+    min-height: 0;
+    padding: 18px 0;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .vc-dashboard-user-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .vc-recent-vod-row {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .vc-recent-vod-row .mantine-Badge-root {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .vc-recent-thumbnail {
+    width: 96px;
+    height: 56px;
+  }
+
+  .vc-dashboard-filters {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

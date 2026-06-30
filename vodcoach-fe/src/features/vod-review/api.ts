@@ -2,8 +2,6 @@ import { api } from "@/lib/api";
 import { toApiResult } from "@/lib/api-result";
 import type { DrawingShape } from "./drawing/types";
 
-export const TEST_VOD_ID = "c6e40d43-a331-4f2b-a68f-07a13089ac15";
-
 export const vodNotesQueryKey = (vodID: string) =>
   ["vod-notes", vodID] as const;
 export const vodAnnotationsQueryKey = (vodID: string) =>

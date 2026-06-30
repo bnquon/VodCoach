@@ -7,6 +7,7 @@ import (
 	authmiddleware "github.com/bnquon/vodcoach-api/cmd/api/internal/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/events"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/auth"
+	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/debug"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/health"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/notes"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/handlers/vods"
@@ -36,6 +37,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client, eve
 
 	registerHandler := auth.NewRegisterHandler(authService)
 	loginHandler := auth.NewLoginHandler(authService)
+	ffprobeHandler := debug.NewFFprobeHandler()
 	vodHandler := vods.NewVodHandler(vodService)
 	noteHandler := notes.NewNoteHandler(noteService)
 	annotationHandler := notes.NewAnnotationHandler(annotationService)
@@ -59,6 +61,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client, eve
 	protected.GET("/vods/:vodID/annotations", annotationHandler.GetAnnotations)
 	protected.POST("/vods/:vodID/annotations", annotationHandler.CreateAnnotation)
 	protected.POST("/vods/:vodID/annotations/batch", annotationHandler.CreateAnnotationsBatch)
+	protected.POST("/debug/ffprobe", ffprobeHandler.Probe)
 
 	return router
 }

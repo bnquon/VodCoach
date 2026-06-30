@@ -3,6 +3,7 @@ package vods
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/auth"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
@@ -23,19 +24,20 @@ type CreateVodUploadRequestBody struct {
 }
 
 type VodResponse struct {
-	ID                  string  `json:"id"`
-	Title               string  `json:"title"`
-	Game                string  `json:"game"`
-	OriginalStorageKey  string  `json:"original_storage_key"`
-	ThumbnailStorageKey *string `json:"thumbnail_storage_key"`
-	OriginalFilename    *string `json:"original_filename"`
-	ContentType         *string `json:"content_type"`
-	DurationSeconds     *int    `json:"duration_seconds"`
-	Width               *int    `json:"width"`
-	Height              *int    `json:"height"`
-	Status              string  `json:"status"`
-	ProcessingProgress  int     `json:"processing_progress"`
-	ErrorMessage        *string `json:"error_message"`
+	ID                  string    `json:"id"`
+	Title               string    `json:"title"`
+	Game                string    `json:"game"`
+	OriginalStorageKey  string    `json:"original_storage_key"`
+	ThumbnailStorageKey *string   `json:"thumbnail_storage_key"`
+	OriginalFilename    *string   `json:"original_filename"`
+	ContentType         *string   `json:"content_type"`
+	DurationSeconds     *int      `json:"duration_seconds"`
+	Width               *int      `json:"width"`
+	Height              *int      `json:"height"`
+	Status              string    `json:"status"`
+	ProcessingProgress  int       `json:"processing_progress"`
+	ErrorMessage        *string   `json:"error_message"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }
 
 type CreateVodUploadResponse struct {
@@ -162,5 +164,6 @@ func (h *VodHandler) toVodResponse(vod repository.Vod) VodResponse {
 		Status:              vod.Status,
 		ProcessingProgress:  vod.ProcessingProgress,
 		ErrorMessage:        vod.ErrorMessage,
+		UpdatedAt:           vod.UpdatedAt,
 	}
 }
