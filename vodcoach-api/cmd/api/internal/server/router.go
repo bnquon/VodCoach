@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client, eventPublisher events.Publisher) *gin.Engine {
+func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName string, s3Client *s3.Client, eventPublisher events.Publisher) *gin.Engine {
 	router := gin.Default()
 	router.Use(corsMiddleware())
 
@@ -31,7 +31,8 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client, eve
 
 	authService := services.NewAuthService(userRepository)
 	storageService := services.NewStorageService(r2BucketName, s3Client)
-	vodService := services.NewVodService(vodRepository, storageService, eventPublisher)
+	thumbnailStorageService := services.NewStorageService(r2ThumbnailBucketName, s3Client)
+	vodService := services.NewVodService(vodRepository, storageService, thumbnailStorageService, eventPublisher)
 	noteService := services.NewNoteService(noteRepository, vodRepository)
 	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
 
@@ -52,8 +53,10 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, s3Client *s3.Client, eve
 	protected.Use(authmiddleware.Middleware())
 	protected.GET("/vods", vodHandler.GetVods)
 	protected.GET("/vods/:vodID", vodHandler.GetVod)
+	protected.GET("/vods/:vodID/playback-url", vodHandler.CreateVodPlaybackURL)
 	protected.POST("/vods/upload", vodHandler.CreateUpload)
 	protected.POST("/vods/:vodID/upload-complete", vodHandler.CompleteUpload)
+	protected.DELETE("/vods/:vodID", vodHandler.DeleteVod)
 	protected.GET("/vods/:vodID/notes", noteHandler.GetNotes)
 	protected.POST("/vods/:vodID/notes", noteHandler.CreateNote)
 	protected.PATCH("/vods/:vodID/notes/:noteID", noteHandler.UpdateNote)

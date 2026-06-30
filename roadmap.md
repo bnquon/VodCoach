@@ -129,24 +129,24 @@ Done when:
 
 Completed: June 29 ✅
 
-## Phase 6: Preview Video
+## Phase 6: Private VOD Playback
 
-Make videos reliably playable.
+Make uploaded videos playable through short-lived private URLs.
 
 Build:
 
-* worker checks if video is browser-playable
-* if needed, worker creates 720p MP4 preview
-* worker uploads preview to R2
-* worker saves preview key to Postgres
-* worker deletes original file from R2 after success
-* frontend plays preview video
+* backend adds `GET /vods/:vodID/playback-url`
+* backend verifies the JWT user owns the VOD
+* backend creates a presigned GET URL for `original_storage_key`
+* frontend fetches the playback URL when opening the review page
+* frontend uses the returned URL as the video source
+* keep generated thumbnails publicly readable from the thumbnail bucket
 
 Done when:
 
-* uploaded VOD becomes a playable processed preview
-* original video is deleted after processing
-* only preview and thumbnail remain in R2
+* owned VODs play in the review workspace without hardcoded `/TestVod.mp4`
+* unauthorized users cannot get playback URLs for VODs they do not own
+* original videos stay private in the VOD bucket
 
 ## Phase 7: Full Review Workspace
 
@@ -156,7 +156,7 @@ Build:
 
 * VOD dashboard
 * review page by VOD id
-* load preview video
+* load private playback URL
 * load annotations
 * create/update/delete notes
 * save drawing JSON

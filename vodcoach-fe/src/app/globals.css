@@ -84,7 +84,7 @@ body {
 
 .vc-recent-vod-row {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 16px;
   align-items: center;
   background: var(--vc-card);
@@ -104,12 +104,31 @@ body {
     background-color 140ms ease;
 }
 
-a.vc-recent-vod-row:hover {
+.vc-recent-vod-row:hover {
   background: #2b2b2b;
   border-color: #5a5a5a;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 7%),
     0 18px 36px rgb(0 0 0 / 28%);
+}
+
+.vc-recent-vod-row:has(.vc-vod-action-button:hover),
+.vc-recent-vod-row:has(.vc-vod-action-button[data-expanded="true"]) {
+  background: var(--vc-card);
+  border-color: var(--vc-border);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 10px 24px rgb(0 0 0 / 18%);
+}
+
+.vc-recent-vod-link {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  color: inherit;
+  min-width: 0;
+  text-decoration: none;
 }
 
 .vc-recent-thumbnail {
@@ -169,17 +188,30 @@ a.vc-recent-vod-row:hover {
   box-shadow: var(--vc-card-shadow);
 }
 
-a.vc-card {
+.vc-vod-card {
   transition:
     transform 140ms ease,
     box-shadow 140ms ease,
     background-color 140ms ease;
 }
 
-a.vc-card:hover {
+.vc-vod-card:hover {
   background: var(--vc-elevated-card);
   box-shadow: var(--vc-elevated-shadow);
   transform: translateY(-2px);
+}
+
+.vc-vod-card:has(.vc-vod-action-button:hover),
+.vc-vod-card:has(.vc-vod-action-button[data-expanded="true"]) {
+  background: var(--vc-card);
+  box-shadow: var(--vc-card-shadow);
+  transform: none;
+}
+
+.vc-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 
 .vc-elevated-card {
@@ -195,6 +227,9 @@ a.vc-card:hover {
 
 .vc-thumbnail {
   aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background:
     linear-gradient(135deg, rgb(229 231 235 / 8%), transparent),
     var(--vc-elevated-card);
@@ -202,11 +237,48 @@ a.vc-card:hover {
   overflow: hidden;
 }
 
+img {
+  /* Horizontal centering */
+  text-align: center;
+
+  /* Vertical centering using Flexbox */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vc-thumbnail > * {
+  width: 100%;
+  height: 100%;
+}
+
 .vc-thumbnail-image {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.vc-vod-action-button {
+  color: var(--vc-muted);
+}
+
+.vc-vod-action-button:hover {
+  background: #3a3a3a;
+  color: var(--vc-text);
+}
+
+.vc-vod-action-menu {
+  background: var(--vc-elevated-card);
+  border-color: var(--vc-border);
+}
+
+.vc-vod-action-delete {
+  color: red;
+}
+
+.vc-vod-action-delete:hover {
+  background: #2b2b2b;
 }
 
 .mantine-Input-input {
@@ -275,12 +347,16 @@ a.vc-card:hover {
   }
 
   .vc-recent-vod-row {
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .vc-recent-vod-row .mantine-Badge-root {
-    grid-column: 2;
+    grid-column: 1;
     justify-self: start;
+  }
+
+  .vc-recent-vod-link {
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .vc-recent-thumbnail {

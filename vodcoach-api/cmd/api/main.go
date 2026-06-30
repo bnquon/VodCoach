@@ -37,10 +37,11 @@ func main() {
 
 	var accountId = os.Getenv("R2_ACCOUNT_ID")
 	var bucketName = os.Getenv("R2_BUCKET_NAME")
+	var thumbnailBucketName = os.Getenv("R2_THUMBNAIL_BUCKET_NAME")
 	var accessKeyId = os.Getenv("R2_AK_ID")
 	var accessKeySecret = os.Getenv("R2_SAK")
 
-	if accountId == "" || bucketName == "" || accessKeyId == "" || accessKeySecret == "" {
+	if accountId == "" || bucketName == "" || thumbnailBucketName == "" || accessKeyId == "" || accessKeySecret == "" {
 		log.Fatal("One of or more .env vars for R2 bucket connection is empty")
 	}
 
@@ -58,7 +59,7 @@ func main() {
 
 	eventPublisher := newEventPublisher()
 	defer eventPublisher.Close()
-	router := server.NewRouter(pool, bucketName, client, eventPublisher)
+	router := server.NewRouter(pool, bucketName, thumbnailBucketName, client, eventPublisher)
 
 	if err := router.Run(":8080"); err != nil {
 		log.Fatal(err)

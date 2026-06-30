@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { Badge, Box, Center, Loader, Paper, Stack, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Center,
+  Loader,
+  Menu,
+  Paper,
+  Stack,
+  Text,
+} from "@mantine/core";
 import {
   getStorageObjectURL,
   VOD_STATUS,
@@ -21,6 +31,7 @@ type RecentVodListProps = {
   emptyMessage: string;
   error: Error | null;
   isLoading: boolean;
+  onDeleteVodRequest?: (vod: DashboardVod) => void;
   vods: DashboardVod[];
 };
 
@@ -28,6 +39,7 @@ export function RecentVodList({
   emptyMessage,
   error,
   isLoading,
+  onDeleteVodRequest,
   vods,
 }: RecentVodListProps) {
   if (isLoading) {
@@ -57,58 +69,114 @@ export function RecentVodList({
   return (
     <Stack className="vc-recent-list" gap="sm">
       {vods.map((vod) => (
-        <RecentVodRow key={vod.id} vod={vod} />
+        <RecentVodRow
+          key={vod.id}
+          onDeleteRequest={
+            onDeleteVodRequest ? () => onDeleteVodRequest(vod) : undefined
+          }
+          vod={vod}
+        />
       ))}
     </Stack>
   );
 }
 
-function RecentVodRow({ vod }: { vod: DashboardVod }) {
-  const thumbnailUrl = getStorageObjectURL(vod.thumbnail_storage_key);
+function RecentVodRow({
+  onDeleteRequest,
+  vod,
+}: {
+  onDeleteRequest?: () => void;
+  vod: DashboardVod;
+}) {
+  const thumbnailUrl = getStorageObjectURL(
+    vod.thumbnail_storage_key,
+    vod.updated_at,
+  );
+  const canDelete =
+    vod.status === VOD_STATUS.ready || vod.status === VOD_STATUS.failed;
 
   return (
-    <Paper
-      className="vc-recent-vod-row"
-      component={Link}
-      href={`/vods/${vod.id}`}
-      radius="md"
-    >
-      <Box className="vc-recent-thumbnail">
-        {thumbnailUrl ? (
-          <Box
-            alt={`${vod.title} thumbnail`}
-            className="vc-thumbnail-image"
-            component="img"
-            src={thumbnailUrl}
-          />
-        ) : (
-          <Center h="100%">
-            <Text size="xs" c="dimmed">
-              thumbnail
-            </Text>
-          </Center>
-        )}
-      </Box>
-      <Stack gap={4}>
-        <Text fw={600} lineClamp={1}>
-          {vod.title}
-        </Text>
-        <Text size="xs" c="dimmed" lineClamp={1}>
-          {vod.game} · updated {formatLastUpdated(vod.updated_at)}
-        </Text>
-        {vod.status === VOD_STATUS.processing ? (
-          <Box className="vc-recent-progress">
+    <Paper className="vc-recent-vod-row" radius="md">
+      <Box
+        className="vc-recent-vod-link"
+        component={Link}
+        href={`/vods/${vod.id}`}
+      >
+        <Box className="vc-recent-thumbnail">
+          {thumbnailUrl ? (
             <Box
-              className="vc-recent-progress-fill"
-              style={{ width: `${vod.processing_progress}%` }}
+              alt={`${vod.title} thumbnail`}
+              className="vc-thumbnail-image"
+              component="img"
+              src={thumbnailUrl}
             />
-          </Box>
-        ) : null}
-      </Stack>
+          ) : (
+            <Center h="100%">
+              <Text size="xs" c="dimmed">
+                thumbnail
+              </Text>
+            </Center>
+          )}
+        </Box>
+        <Stack gap={4} miw={0}>
+          <Text fw={600} lineClamp={1}>
+            {vod.title}
+          </Text>
+          <Text size="xs" c="dimmed" lineClamp={1}>
+            {vod.game} · updated {formatLastUpdated(vod.updated_at)}
+          </Text>
+          {vod.status === VOD_STATUS.processing ? (
+            <Box className="vc-recent-progress">
+              <Box
+                className="vc-recent-progress-fill"
+                style={{ width: `${vod.processing_progress}%` }}
+              />
+            </Box>
+          ) : null}
+        </Stack>
+      </Box>
       <Badge color={getStatusColor(vod.status)} variant="light" w="fit-content">
         {getStatusLabel(vod.status)}
       </Badge>
+      {onDeleteRequest ? (
+        <RecentVodMenu
+          canDelete={canDelete}
+          onDeleteRequest={onDeleteRequest}
+        />
+      ) : null}
     </Paper>
+  );
+}
+
+function RecentVodMenu({
+  canDelete,
+  onDeleteRequest,
+}: {
+  canDelete: boolean;
+  onDeleteRequest: () => void;
+}) {
+  return (
+    <Menu position="bottom-end" shadow="md" width={180}>
+      <Menu.Target>
+        <ActionIcon
+          aria-label="VOD actions"
+          className="vc-vod-action-button"
+          size="sm"
+          variant="subtle"
+        >
+          ⋮
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown className="vc-vod-action-menu">
+        <Menu.Item
+          className="vc-vod-action-delete"
+          disabled={!canDelete}
+          onClick={onDeleteRequest}
+        >
+          Delete
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
   );
 }
 

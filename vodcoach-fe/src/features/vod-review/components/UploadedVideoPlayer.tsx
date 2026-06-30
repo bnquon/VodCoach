@@ -318,6 +318,7 @@ export function UploadedVideoPlayer({
             disablePictureInPicture
             controls
             preload="metadata"
+            src={src}
             onLoadedMetadata={(event) =>
               onDurationChange?.(event.currentTarget.duration)
             }

@@ -6,6 +6,8 @@ export const vodNotesQueryKey = (vodID: string) =>
   ["vod-notes", vodID] as const;
 export const vodAnnotationsQueryKey = (vodID: string) =>
   ["vod-annotations", vodID] as const;
+export const vodPlaybackURLQueryKey = (vodID: string) =>
+  ["vod-playback-url", vodID] as const;
 
 export const NOTE_KIND = {
   general: "general",
@@ -35,6 +37,10 @@ export type DrawingDTO = {
 export type AnnotationsDTO = {
   notes: NoteDTO[];
   drawings: DrawingDTO[];
+};
+
+export type VodPlaybackURLDTO = {
+  playback_url: string;
 };
 
 export type CreateNoteRequestBody = {
@@ -98,6 +104,14 @@ export async function getVodAnnotations(vodID: string) {
       .get<AnnotationsDTO>(`/vods/${vodID}/annotations`)
       .then((response) => response.data),
   );
+}
+
+export async function getVodPlaybackURL(vodID: string) {
+  const response = await api.get<VodPlaybackURLDTO>(
+    `/vods/${vodID}/playback-url`,
+  );
+
+  return response.data;
 }
 
 export async function createVodDrawingsBatch(

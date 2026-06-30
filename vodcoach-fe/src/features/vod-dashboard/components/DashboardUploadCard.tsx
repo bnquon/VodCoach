@@ -186,14 +186,14 @@ export function DashboardUploadCard({
 
         <Stack gap="sm">
           <TextInput
-            label="Title"
+            label="Title*"
             placeholder="Scrim #1"
             disabled={isUploading}
             value={title}
             onChange={(event) => setTitle(event.currentTarget.value)}
           />
           <TextInput
-            label="Game"
+            label="Game*"
             placeholder="League of Legends"
             disabled={isUploading}
             value={game}

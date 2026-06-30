@@ -7,9 +7,11 @@ import {
   deleteVodNote,
   getVodAnnotations,
   getVodNotes,
+  getVodPlaybackURL,
   updateVodNote,
   vodAnnotationsQueryKey,
   vodNotesQueryKey,
+  vodPlaybackURLQueryKey,
   type AnnotationsDTO,
   type CreateDrawingRequestBody,
   type NoteDTO,
@@ -44,6 +46,14 @@ export function useVodNotes(vodID: string) {
     isFetching: query.isFetching,
     refetch: query.refetch,
   };
+}
+
+export function useVodPlaybackURL(vodID: string) {
+  return useQuery({
+    queryKey: vodPlaybackURLQueryKey(vodID),
+    queryFn: () => getVodPlaybackURL(vodID),
+    staleTime: 50 * 60 * 1000,
+  });
 }
 
 export function useCreateVodNote(vodID: string) {

@@ -30,18 +30,23 @@ export type VodDTO = {
 
 const THUMBNAIL_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_THUMBNAIL_BASE_URL;
 
-export function getStorageObjectURL(storageKey: string | null) {
+export function getStorageObjectURL(
+  storageKey: string | null,
+  cacheKey?: string,
+) {
   const normalizedStorageKey = storageKey?.trim();
 
   if (!normalizedStorageKey) {
     return null;
   }
 
+  const cacheSuffix = cacheKey ? `?v=${encodeURIComponent(cacheKey)}` : "";
+
   if (normalizedStorageKey.startsWith("http")) {
-    return normalizedStorageKey;
+    return `${normalizedStorageKey}${cacheSuffix}`;
   }
 
-  return `${THUMBNAIL_PUBLIC_BASE_URL}/${normalizedStorageKey.replace(/^\/+/, "")}`;
+  return `${THUMBNAIL_PUBLIC_BASE_URL}/${normalizedStorageKey.replace(/^\/+/, "")}${cacheSuffix}`;
 }
 
 export type CreateVodUploadInput = {
@@ -84,10 +89,20 @@ export async function getVods() {
   return response.data;
 }
 
+export async function getVod(vodID: string) {
+  const response = await api.get<VodDTO>(`/vods/${vodID}`);
+
+  return response.data;
+}
+
 export async function completeVodUpload(vodID: string) {
   const response = await api.post<VodDTO>(`/vods/${vodID}/upload-complete`);
 
   return response.data;
+}
+
+export async function deleteVod(vodID: string) {
+  await api.delete(`/vods/${vodID}`);
 }
 
 export async function uploadVodFile({

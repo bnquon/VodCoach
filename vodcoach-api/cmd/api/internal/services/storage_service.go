@@ -24,6 +24,19 @@ func NewStorageService(bucketName string, s3Client *s3.Client) *StorageService {
 	}
 }
 
+func (s *StorageService) CreatePresignedGetURL(ctx context.Context, storageKey string, expiresIn time.Duration) (string, error) {
+	presignResult, err := s.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(storageKey),
+	}, s3.WithPresignExpires(expiresIn))
+
+	if err != nil {
+		return "", err
+	}
+
+	return presignResult.URL, nil
+}
+
 func (s *StorageService) CreatePresignedUploadURL(ctx context.Context, originalStorageKey string, contentType string) (string, error) {
 	presignResult, err := s.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucketName),
@@ -73,6 +86,18 @@ func (s *StorageService) UploadObject(ctx context.Context, storageKey string, lo
 		Key:         aws.String(storageKey),
 		Body:        localFile,
 		ContentType: aws.String(contentType),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *StorageService) DeleteObject(ctx context.Context, storageKey string) error {
+	_, err := s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(storageKey),
 	})
 	if err != nil {
 		return err

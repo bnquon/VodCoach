@@ -8,6 +8,7 @@ import {
   Center,
   Group,
   Loader,
+  Modal,
   Paper,
   Select,
   SimpleGrid,
@@ -20,11 +21,15 @@ import { DashboardUploadCard } from "./DashboardUploadCard";
 import { RecentVodList, type DashboardVod } from "./RecentVodList";
 import { VodCard } from "./VodCard";
 import {
-  getStorageObjectURL,
   VOD_STATUS,
+  getStorageObjectURL,
   type VodStatus,
 } from "@/features/vod-dashboard/api";
-import { useAddVodToCache, useVods } from "@/features/vod-dashboard/hooks";
+import {
+  useAddVodToCache,
+  useDeleteVod,
+  useVods,
+} from "@/features/vod-dashboard/hooks";
 import { clearAuth } from "@/lib/auth-storage";
 import { useAuthUser } from "@/lib/use-auth";
 
@@ -33,8 +38,12 @@ export function HomeDashboard() {
   const user = useAuthUser();
   const { data: vods = [], error, isLoading } = useVods();
   const addVodToCache = useAddVodToCache();
+  const deleteVod = useDeleteVod();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<VodStatus | null>(null);
+  const [vodPendingDelete, setVodPendingDelete] = useState<DashboardVod | null>(
+    null,
+  );
   const recentVods = vods.slice(0, 4);
   const filteredVods = useMemo(
     () => filterVods(vods, searchQuery, statusFilter),
@@ -44,6 +53,15 @@ export function HomeDashboard() {
   function handleLogout() {
     clearAuth();
     router.replace("/login");
+  }
+
+  function handleConfirmDeleteVod() {
+    if (!vodPendingDelete) {
+      return;
+    }
+
+    deleteVod.mutate(vodPendingDelete.id);
+    setVodPendingDelete(null);
   }
 
   return (
@@ -92,6 +110,7 @@ export function HomeDashboard() {
               emptyMessage="No recently updated VODs yet."
               error={error}
               isLoading={isLoading}
+              onDeleteVodRequest={setVodPendingDelete}
               vods={recentVods}
             />
           </Paper>
@@ -140,10 +159,41 @@ export function HomeDashboard() {
             )}
             error={error}
             isLoading={isLoading}
+            onDeleteVodRequest={setVodPendingDelete}
             vods={filteredVods}
           />
         </Stack>
       </Stack>
+      <Modal
+        centered
+        opened={vodPendingDelete !== null}
+        title="Delete VOD?"
+        onClose={() => setVodPendingDelete(null)}
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            This will permanently delete the VOD, video file, thumbnail, notes,
+            timestamped notes, and drawings.
+          </Text>
+          {vodPendingDelete ? (
+            <Text fw={600} size="sm">
+              {vodPendingDelete.title}
+            </Text>
+          ) : null}
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setVodPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              loading={deleteVod.isPending}
+              onClick={handleConfirmDeleteVod}
+            >
+              Delete
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </main>
   );
 }
@@ -186,10 +236,17 @@ type VodGridProps = {
   emptyMessage: string;
   error: Error | null;
   isLoading: boolean;
+  onDeleteVodRequest: (vod: DashboardVod) => void;
   vods: DashboardVod[];
 };
 
-function VodGrid({ emptyMessage, error, isLoading, vods }: VodGridProps) {
+function VodGrid({
+  emptyMessage,
+  error,
+  isLoading,
+  onDeleteVodRequest,
+  vods,
+}: VodGridProps) {
   if (isLoading) {
     return (
       <Center className="vc-card" h={160}>
@@ -230,8 +287,12 @@ function VodGrid({ emptyMessage, error, isLoading, vods }: VodGridProps) {
           game={vod.game}
           id={vod.id}
           status={vod.status}
-          thumbnailUrl={getStorageObjectURL(vod.thumbnail_storage_key)}
+          thumbnailUrl={getStorageObjectURL(
+            vod.thumbnail_storage_key,
+            vod.updated_at,
+          )}
           title={vod.title}
+          onDeleteRequest={() => onDeleteVodRequest(vod)}
         />
       ))}
     </SimpleGrid>

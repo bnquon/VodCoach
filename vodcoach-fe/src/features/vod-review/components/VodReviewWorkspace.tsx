@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Box, Flex, Stack } from "@mantine/core";
+import { Box, Center, Flex, Loader, Paper, Stack, Text } from "@mantine/core";
 import { NOTE_KIND } from "../api";
 import {
   useCreateVodDrawingsBatch,
@@ -10,6 +10,7 @@ import {
   useUpdateVodNote,
   useVodAnnotations,
   useVodNotes,
+  useVodPlaybackURL,
 } from "../hooks";
 import {
   toDrawingAnnotations,
@@ -32,6 +33,11 @@ export function VodReviewWorkspace({
 }: VodReviewWorkspaceProps) {
   const { notes: fetchedNotes } = useVodNotes(videoId);
   const { annotations } = useVodAnnotations(videoId);
+  const {
+    data: playbackURL,
+    error: playbackURLError,
+    isLoading: isPlaybackURLLoading,
+  } = useVodPlaybackURL(videoId);
   const createNote = useCreateVodNote(videoId);
   const updateNote = useUpdateVodNote(videoId);
   const deleteNote = useDeleteVodNote(videoId);
@@ -136,17 +142,33 @@ export function VodReviewWorkspace({
           }}
           w="100%"
         >
-          <UploadedVideoPlayer
-            drawingAnnotations={drawingAnnotations}
-            src="/TestVod.mp4"
-            title={vodTitle}
-            isTheatreMode={isTheatreMode}
-            videoRef={videoPlayerRef}
-            onDurationChange={setDurationSeconds}
-            onSaveDrawingAnnotations={handleSaveDrawingAnnotations}
-            onTheatreModeChange={setIsTheatreMode}
-            onTimeChange={setCurrentTimeSeconds}
-          />
+          {isPlaybackURLLoading ? (
+            <Paper className="vc-card" radius="md">
+              <Center h={360}>
+                <Loader size="sm" />
+              </Center>
+            </Paper>
+          ) : playbackURLError || !playbackURL?.playback_url ? (
+            <Paper className="vc-card" radius="md">
+              <Center h={360}>
+                <Text size="sm" c="red">
+                  Failed to load playback URL
+                </Text>
+              </Center>
+            </Paper>
+          ) : (
+            <UploadedVideoPlayer
+              drawingAnnotations={drawingAnnotations}
+              src={playbackURL.playback_url}
+              title={vodTitle}
+              isTheatreMode={isTheatreMode}
+              videoRef={videoPlayerRef}
+              onDurationChange={setDurationSeconds}
+              onSaveDrawingAnnotations={handleSaveDrawingAnnotations}
+              onTheatreModeChange={setIsTheatreMode}
+              onTimeChange={setCurrentTimeSeconds}
+            />
+          )}
         </Box>
 
         <Flex

@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { Badge, Box, Paper, Stack, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Group,
+  Menu,
+  Paper,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { VOD_STATUS, type VodStatus } from "@/features/vod-dashboard/api";
 
 type DemoVodStatus = "Ready" | "Processing" | "Failed";
@@ -12,6 +21,7 @@ type VodCardProps = {
   status: CardVodStatus;
   thumbnailUrl?: string | null;
   title: string;
+  onDeleteRequest?: () => void;
 };
 
 const statusColor: Record<CardVodStatus, string> = {
@@ -39,49 +49,103 @@ const statusLabel: Record<CardVodStatus, string> = {
 export function VodCard({
   game,
   id,
+  onDeleteRequest,
   reviewVodID = id,
   status,
   thumbnailUrl,
   title,
 }: VodCardProps) {
+  const canDelete = status === VOD_STATUS.ready || status === VOD_STATUS.failed;
+
   return (
-    <Paper
-      className="vc-card"
-      component={Link}
-      href={`/vods/${reviewVodID}`}
-      p="sm"
-      radius="md"
-      style={{ color: "inherit", textDecoration: "none" }}
-    >
-      <Stack gap="xs">
-        <Paper className="vc-thumbnail" radius="sm">
-          {thumbnailUrl ? (
-            <Box
-              alt={`${title} thumbnail`}
-              className="vc-thumbnail-image"
-              component="img"
-              src={thumbnailUrl}
-            />
-          ) : (
-            <Stack h="100%" align="center" justify="center" gap={2}>
-              <Text size="xs" c="dimmed">
-                thumbnail
+    <Paper className="vc-card vc-vod-card" p="sm" radius="md">
+      <Stack gap="xs" h="100%">
+        <Box
+          className="vc-card-link"
+          component={Link}
+          href={`/vods/${reviewVodID}`}
+        >
+          <Paper className="vc-thumbnail" radius="sm">
+            {thumbnailUrl ? (
+              <Box
+                alt={`${title} thumbnail`}
+                className="vc-thumbnail-image"
+                component="img"
+                src={thumbnailUrl}
+              />
+            ) : (
+              <Stack h="100%" align="center" justify="center" gap={2}>
+                <Text size="xs" c="dimmed">
+                  thumbnail
+                </Text>
+              </Stack>
+            )}
+          </Paper>
+        </Box>
+        <Group align="start" gap="xs" justify="space-between" wrap="nowrap">
+          <Box
+            className="vc-card-link"
+            component={Link}
+            flex="1 1 auto"
+            href={`/vods/${reviewVodID}`}
+            miw={0}
+          >
+            <Stack gap={2}>
+              <Text fw={600} size="sm" lineClamp={1}>
+                {title}
               </Text>
+              <Text size="xs" c="dimmed">
+                {game}
+              </Text>
+              <Badge
+                color={statusColor[status]}
+                variant="light"
+                w="fit-content"
+              >
+                {statusLabel[status]}
+              </Badge>
             </Stack>
-          )}
-        </Paper>
-        <Stack gap={2}>
-          <Text fw={600} size="sm" lineClamp={1}>
-            {title}
-          </Text>
-          <Text size="xs" c="dimmed">
-            {game}
-          </Text>
-          <Badge color={statusColor[status]} variant="light" w="fit-content">
-            {statusLabel[status]}
-          </Badge>
-        </Stack>
+          </Box>
+          {onDeleteRequest ? (
+            <VodCardMenu
+              canDelete={canDelete}
+              onDeleteRequest={onDeleteRequest}
+            />
+          ) : null}
+        </Group>
       </Stack>
     </Paper>
+  );
+}
+
+function VodCardMenu({
+  canDelete,
+  onDeleteRequest,
+}: {
+  canDelete: boolean;
+  onDeleteRequest: () => void;
+}) {
+  return (
+    <Menu position="bottom-end" shadow="md" width={180}>
+      <Menu.Target>
+        <ActionIcon
+          aria-label="VOD actions"
+          className="vc-vod-action-button"
+          size="sm"
+          variant="subtle"
+        >
+          ⋮
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown className="vc-vod-action-menu">
+        <Menu.Item
+          className="vc-vod-action-delete"
+          disabled={!canDelete}
+          onClick={onDeleteRequest}
+        >
+          Delete
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
   );
 }
