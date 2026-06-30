@@ -68,16 +68,10 @@ function RecentVodRow({ vod }: { vod: DashboardVod }) {
 
   return (
     <Paper
-      className="vc-card vc-recent-vod-row"
+      className="vc-recent-vod-row"
       component={Link}
       href={`/vods/${vod.id}`}
       radius="md"
-      style={{
-        color: "inherit",
-        display: "grid",
-        textDecoration: "none",
-        width: "100%",
-      }}
     >
       <Box className="vc-recent-thumbnail">
         {thumbnailUrl ? (
