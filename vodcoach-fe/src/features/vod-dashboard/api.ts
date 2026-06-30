@@ -28,8 +28,7 @@ export type VodDTO = {
   updated_at: string;
 };
 
-const THUMBNAIL_PUBLIC_BASE_URL =
-  "https://pub-a560d09a92e746ebb509e3c04d8fec01.r2.dev";
+const THUMBNAIL_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_THUMBNAIL_BASE_URL;
 
 export function getStorageObjectURL(storageKey: string | null) {
   const normalizedStorageKey = storageKey?.trim();
