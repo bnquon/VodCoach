@@ -22,7 +22,7 @@ import { TimeStampedNotes } from "./TimeStampedNotes";
 import { UploadedVideoPlayer } from "./UploadedVideoPlayer";
 
 interface VodReviewWorkspaceProps {
-  videoId?: string;
+  videoId: string;
   vodTitle: string;
 }
 
@@ -30,15 +30,12 @@ export function VodReviewWorkspace({
   videoId,
   vodTitle,
 }: VodReviewWorkspaceProps) {
-  // TODO: Use videoId when real video processing/playback is ready.
-  void videoId;
-
-  const { notes: fetchedNotes } = useVodNotes();
-  const { annotations } = useVodAnnotations();
-  const createNote = useCreateVodNote();
-  const updateNote = useUpdateVodNote();
-  const deleteNote = useDeleteVodNote();
-  const createDrawingsBatch = useCreateVodDrawingsBatch();
+  const { notes: fetchedNotes } = useVodNotes(videoId);
+  const { annotations } = useVodAnnotations(videoId);
+  const createNote = useCreateVodNote(videoId);
+  const updateNote = useUpdateVodNote(videoId);
+  const deleteNote = useDeleteVodNote(videoId);
+  const createDrawingsBatch = useCreateVodDrawingsBatch(videoId);
   const notes = toTimestampedNotes(fetchedNotes);
   const generalNotes = toGeneralNotes(fetchedNotes);
   const drawingAnnotations = toDrawingAnnotations(annotations.drawings);
@@ -128,14 +125,14 @@ export function VodReviewWorkspace({
   return (
     <Stack gap="xl">
       <Flex
-        direction={{ base: "column", md: isTheatreMode ? "column" : "row" }}
+        direction={{ base: "column", lg: isTheatreMode ? "column" : "row" }}
         gap="sm"
         align="stretch"
       >
         <Box
           flex={{
             base: "1 1 auto",
-            md: isTheatreMode ? "1 1 auto" : "0 0 60%",
+            lg: isTheatreMode ? "1 1 auto" : "0 0 60%",
           }}
           w="100%"
         >
@@ -153,13 +150,17 @@ export function VodReviewWorkspace({
         </Box>
 
         <Flex
-          direction={{ base: "column", md: isTheatreMode ? "row" : "column" }}
+          direction={{ base: "column", lg: isTheatreMode ? "row" : "column" }}
           flex="1 1 0"
           gap="sm"
           mih={0}
           w="100%"
         >
-          <Box flex="1 1 0" mih={isTheatreMode ? 400 : 0} w="100%">
+          <Box
+            flex="1 1 0"
+            mih={{ base: 320, lg: isTheatreMode ? 400 : 0 }}
+            w="100%"
+          >
             <TimeStampedNotes
               currentTimeSeconds={currentTimeSeconds}
               durationSeconds={durationSeconds}
@@ -171,7 +172,11 @@ export function VodReviewWorkspace({
               onTimestampClick={handleTimestampClick}
             />
           </Box>
-          <Box flex="1 1 0" mih={isTheatreMode ? 400 : 0} w="100%">
+          <Box
+            flex="1 1 0"
+            mih={{ base: 320, lg: isTheatreMode ? 400 : 0 }}
+            w="100%"
+          >
             <GeneralNotes
               notes={generalNotes}
               onCreateNote={handleCreateGeneralNote}

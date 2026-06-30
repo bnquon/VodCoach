@@ -14,6 +14,7 @@ import {
 } from "@mantine/core";
 import { useState } from "react";
 import type { GeneralNote } from "../types";
+import { NotesEmptyState } from "./NotesEmptyState";
 
 type GeneralNotesProps = {
   notes: GeneralNote[];
@@ -147,6 +148,8 @@ export function GeneralNotes({
                 </Button>
               </Group>
             </Stack>
+          ) : notes.length === 0 ? (
+            <NotesEmptyState message="No general notes yet." />
           ) : (
             <Stack gap={6}>
               {notes.map((note) => (

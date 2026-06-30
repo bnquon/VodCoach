@@ -133,6 +133,8 @@ func (s *VodService) CompleteVodUpload(ctx context.Context, vodID string, userID
 		return nil, err
 	}
 
+	
+
 	// This hands the slow post-upload work to the worker. The worker consumes
 	// vod.uploaded and updates this same VOD row through Postgres.
 	if err := s.eventPublisher.PublishVodUploaded(ctx, events.VodUploadedEvent{

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, Paper, Stack, Text } from "@mantine/core";
+import { Badge, Box, Paper, Stack, Text } from "@mantine/core";
 import { VOD_STATUS, type VodStatus } from "@/features/vod-dashboard/api";
 
 type DemoVodStatus = "Ready" | "Processing" | "Failed";
@@ -10,6 +10,7 @@ type VodCardProps = {
   id: string;
   reviewVodID?: string;
   status: CardVodStatus;
+  thumbnailUrl?: string | null;
   title: string;
 };
 
@@ -40,6 +41,7 @@ export function VodCard({
   id,
   reviewVodID = id,
   status,
+  thumbnailUrl,
   title,
 }: VodCardProps) {
   return (
@@ -52,12 +54,21 @@ export function VodCard({
       style={{ color: "inherit", textDecoration: "none" }}
     >
       <Stack gap="xs">
-        <Paper className="vc-thumbnail" h={96} radius="sm">
-          <Stack h="100%" align="center" justify="center" gap={2}>
-            <Text size="xs" c="dimmed">
-              thumbnail
-            </Text>
-          </Stack>
+        <Paper className="vc-thumbnail" radius="sm">
+          {thumbnailUrl ? (
+            <Box
+              alt={`${title} thumbnail`}
+              className="vc-thumbnail-image"
+              component="img"
+              src={thumbnailUrl}
+            />
+          ) : (
+            <Stack h="100%" align="center" justify="center" gap={2}>
+              <Text size="xs" c="dimmed">
+                thumbnail
+              </Text>
+            </Stack>
+          )}
         </Paper>
         <Stack gap={2}>
           <Text fw={600} size="sm" lineClamp={1}>

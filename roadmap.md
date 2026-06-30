@@ -127,6 +127,8 @@ Done when:
 * dashboard shows generated thumbnail
 * failed videos show an error
 
+Completed: June 29 ✅
+
 ## Phase 6: Preview Video
 
 Make videos reliably playable.
@@ -166,24 +168,7 @@ Done when:
 * user can review a processed VOD end to end
 * notes and drawings persist correctly
 
-## Phase 8: AI Report
-
-Add useful AI.
-
-Build:
-
-* report generation endpoint
-* prompt from notes/tags/drawing summaries
-* save Markdown report to Postgres
-* display report in frontend
-* export/copy Markdown
-
-Done when:
-
-* user can generate a structured coaching report
-* report includes recurring mistakes, examples, strengths, and practice goals
-
-## Phase 9: Polish
+## Phase 8: Polish
 
 Make it portfolio-ready.
 
@@ -197,60 +182,8 @@ Build:
 * README
 * architecture diagram
 * demo video
-* resume bullet
 
 Done when:
 
 * someone can understand the project in under 2 minutes
 * deployed demo works with a small sample VOD
-
-## Suggested 1-Month Timeline
-
-Week 1:
-
-* drawing prototype
-* basic Go API
-* database schema
-* save/load annotations
-
-Week 2:
-
-* R2 uploads
-* VOD dashboard
-* auth
-* basic review page connected to backend
-
-Week 3:
-
-* Redpanda
-* Go worker
-* ffprobe
-* thumbnail generation
-* preview video generation
-
-Week 4:
-
-* AI report
-* Markdown export
-* cleanup flow
-* UI polish
-* README and demo
-
-## Scope Control
-
-Avoid until after MVP:
-
-* multiplayer review
-* Discord bot
-* transcription
-* raw AI video analysis
-* semantic search
-* multiple preview qualities
-* mobile app
-* advanced sharing
-* Kubernetes
-* overcomplicated deployment
-
-Always return to the core loop:
-
-Upload VOD → process video → review with notes/drawings → generate AI report.

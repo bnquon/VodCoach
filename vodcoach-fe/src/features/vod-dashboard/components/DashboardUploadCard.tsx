@@ -141,16 +141,21 @@ export function DashboardUploadCard({
   }
 
   return (
-    <Paper className="vc-elevated-card" p="lg" radius="md">
-      <Stack gap="md">
-        <Stack gap={4}>
-          <Title order={2} size="h3">
-            Upload new VOD
-          </Title>
-          <Text size="sm" c="dimmed">
-            Drop one MP4 here or click to browse.
+    <Paper className="vc-elevated-card vc-upload-card" p="lg" radius="md">
+      <Stack gap="md" h="100%">
+        <Group justify="space-between" align="flex-start">
+          <Stack gap={4}>
+            <Title order={2} size="h3">
+              Upload VOD
+            </Title>
+            <Text size="sm" c="dimmed">
+              Drop one MP4 here or click to browse.
+            </Text>
+          </Stack>
+          <Text size="xs" fw={700} c="dimmed">
+            MP4 only
           </Text>
-        </Stack>
+        </Group>
 
         <Dropzone
           accept={[MIME_TYPES.mp4]}
@@ -160,7 +165,7 @@ export function DashboardUploadCard({
           disabled={isUploading}
           onDrop={handleFileDrop}
         >
-          <Group justify="center" mih={96} p="md">
+          <Group justify="center" mih={112} p="md">
             <Stack gap={4} align="center">
               <Text fw={600}>
                 {selectedFile ? selectedFile.name : "Select an MP4 file"}
@@ -179,29 +184,32 @@ export function DashboardUploadCard({
           />
         ) : null}
 
-        <Group align="end" grow>
+        <Stack gap="sm">
           <TextInput
             label="Title"
-            placeholder="Match vs Rivals"
+            placeholder="Scrim #1"
             disabled={isUploading}
             value={title}
             onChange={(event) => setTitle(event.currentTarget.value)}
           />
           <TextInput
             label="Game"
-            placeholder="Valorant"
+            placeholder="League of Legends"
             disabled={isUploading}
             value={game}
             onChange={(event) => setGame(event.currentTarget.value)}
           />
-          <Button
-            disabled={!canUpload}
-            loading={isUploading}
-            onClick={() => uploadMutation.mutate()}
-          >
-            Upload
-          </Button>
-        </Group>
+        </Stack>
+
+        <Button
+          disabled={!canUpload}
+          fullWidth
+          loading={isUploading}
+          mt="auto"
+          onClick={() => uploadMutation.mutate()}
+        >
+          Upload
+        </Button>
       </Stack>
     </Paper>
   );

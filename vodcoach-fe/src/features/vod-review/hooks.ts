@@ -7,7 +7,6 @@ import {
   deleteVodNote,
   getVodAnnotations,
   getVodNotes,
-  TEST_VOD_ID,
   updateVodNote,
   vodAnnotationsQueryKey,
   vodNotesQueryKey,
@@ -31,10 +30,10 @@ type UpdateVodNoteInput = {
   tags: string[];
 };
 
-export function useVodNotes() {
+export function useVodNotes(vodID: string) {
   const query = useQuery({
-    queryKey: vodNotesQueryKey(TEST_VOD_ID),
-    queryFn: () => getVodNotes(TEST_VOD_ID),
+    queryKey: vodNotesQueryKey(vodID),
+    queryFn: () => getVodNotes(vodID),
   });
   const [notes, requestError] = query.data ?? [null, null];
 
@@ -47,13 +46,13 @@ export function useVodNotes() {
   };
 }
 
-export function useCreateVodNote() {
+export function useCreateVodNote(vodID: string) {
   const queryClient = useQueryClient();
-  const queryKey = vodNotesQueryKey(TEST_VOD_ID);
+  const queryKey = vodNotesQueryKey(vodID);
 
   return useMutation({
     mutationFn: (input: CreateVodNoteInput) =>
-      createVodNote(TEST_VOD_ID, {
+      createVodNote(vodID, {
         note_kind: input.noteKind,
         timestamp_seconds: input.timestampSeconds,
         note_text: input.noteText,
@@ -68,7 +67,7 @@ export function useCreateVodNote() {
       const optimisticNoteID = `optimistic-${crypto.randomUUID()}`;
       const optimisticNote: NoteDTO = {
         id: optimisticNoteID,
-        vod_id: TEST_VOD_ID,
+        vod_id: vodID,
         note_kind: input.noteKind,
         timestamp_seconds: input.timestampSeconds,
         note_text: input.noteText,
@@ -107,13 +106,13 @@ export function useCreateVodNote() {
   });
 }
 
-export function useUpdateVodNote() {
+export function useUpdateVodNote(vodID: string) {
   const queryClient = useQueryClient();
-  const queryKey = vodNotesQueryKey(TEST_VOD_ID);
+  const queryKey = vodNotesQueryKey(vodID);
 
   return useMutation({
     mutationFn: (input: UpdateVodNoteInput) =>
-      updateVodNote(TEST_VOD_ID, input.id, {
+      updateVodNote(vodID, input.id, {
         timestamp_seconds: input.timestampSeconds,
         note_text: input.noteText,
         tags: input.tags,
@@ -169,12 +168,12 @@ export function useUpdateVodNote() {
   });
 }
 
-export function useDeleteVodNote() {
+export function useDeleteVodNote(vodID: string) {
   const queryClient = useQueryClient();
-  const queryKey = vodNotesQueryKey(TEST_VOD_ID);
+  const queryKey = vodNotesQueryKey(vodID);
 
   return useMutation({
-    mutationFn: (noteID: string) => deleteVodNote(TEST_VOD_ID, noteID),
+    mutationFn: (noteID: string) => deleteVodNote(vodID, noteID),
     onMutate: async (noteID) => {
       await queryClient.cancelQueries({ queryKey });
 
@@ -207,10 +206,10 @@ export function useDeleteVodNote() {
   });
 }
 
-export function useVodAnnotations() {
+export function useVodAnnotations(vodID: string) {
   const query = useQuery({
-    queryKey: vodAnnotationsQueryKey(TEST_VOD_ID),
-    queryFn: () => getVodAnnotations(TEST_VOD_ID),
+    queryKey: vodAnnotationsQueryKey(vodID),
+    queryFn: () => getVodAnnotations(vodID),
   });
   const [annotations, requestError] = query.data ?? [null, null];
 
@@ -223,13 +222,13 @@ export function useVodAnnotations() {
   };
 }
 
-export function useCreateVodDrawingsBatch() {
+export function useCreateVodDrawingsBatch(vodID: string) {
   const queryClient = useQueryClient();
-  const queryKey = vodAnnotationsQueryKey(TEST_VOD_ID);
+  const queryKey = vodAnnotationsQueryKey(vodID);
 
   return useMutation({
     mutationFn: (drawings: CreateDrawingRequestBody[]) =>
-      createVodDrawingsBatch(TEST_VOD_ID, { drawings }),
+      createVodDrawingsBatch(vodID, { drawings }),
     onSuccess: (createdDrawings) => {
       queryClient.setQueryData<ApiResult<AnnotationsDTO>>(
         queryKey,

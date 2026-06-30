@@ -25,7 +25,24 @@ export type VodDTO = {
   status: VodStatus;
   processing_progress: number;
   error_message: string | null;
+  updated_at: string;
 };
+
+const THUMBNAIL_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_THUMBNAIL_BASE_URL;
+
+export function getStorageObjectURL(storageKey: string | null) {
+  const normalizedStorageKey = storageKey?.trim();
+
+  if (!normalizedStorageKey) {
+    return null;
+  }
+
+  if (normalizedStorageKey.startsWith("http")) {
+    return normalizedStorageKey;
+  }
+
+  return `${THUMBNAIL_PUBLIC_BASE_URL}/${normalizedStorageKey.replace(/^\/+/, "")}`;
+}
 
 export type CreateVodUploadInput = {
   title: string;
