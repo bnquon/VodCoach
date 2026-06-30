@@ -5,7 +5,9 @@ import {
   deleteVod,
   getVod,
   getVods,
+  updateVod,
   VOD_STATUS,
+  type UpdateVodInput,
   type VodDTO,
   type VodStatus,
 } from "./api";
@@ -18,6 +20,10 @@ const POLLING_VOD_STATUSES: VodStatus[] = [
   VOD_STATUS.uploaded,
   VOD_STATUS.processing,
 ];
+
+type UpdateVodMutationInput = UpdateVodInput & {
+  vodID: string;
+};
 
 export function useVods() {
   return useQuery({
@@ -98,12 +104,41 @@ export function useDeleteVod() {
   });
 }
 
+export function useUpdateVod() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ vodID, ...input }: UpdateVodMutationInput) =>
+      updateVod(vodID, input),
+    onSuccess: (updatedVod) => {
+      queryClient.setQueryData<VodDTO[]>(vodsQueryKey, (currentVods) =>
+        (currentVods ?? []).map((vod) =>
+          vod.id === updatedVod.id ? updatedVod : vod,
+        ),
+      );
+      queryClient.setQueryData(vodQueryKey(updatedVod.id), updatedVod);
+      toast.success("VOD updated");
+    },
+    onError: (error) => {
+      toast.error(getVodMutationErrorMessage(error, "Failed to update VOD"));
+    },
+    onSettled: (_data, _error, input) => {
+      queryClient.invalidateQueries({ queryKey: vodsQueryKey });
+      queryClient.invalidateQueries({ queryKey: vodQueryKey(input.vodID) });
+    },
+  });
+}
+
 function getDeleteVodErrorMessage(error: unknown) {
+  return getVodMutationErrorMessage(error, "Failed to delete VOD");
+}
+
+function getVodMutationErrorMessage(error: unknown, fallbackMessage: string) {
   if (isAxiosError(error)) {
     return typeof error.response?.data?.error === "string"
       ? error.response.data.error
       : error.message;
   }
 
-  return error instanceof Error ? error.message : "Failed to delete VOD";
+  return error instanceof Error ? error.message : fallbackMessage;
 }

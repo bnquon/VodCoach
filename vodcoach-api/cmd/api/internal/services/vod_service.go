@@ -20,6 +20,7 @@ var (
 	ErrInvalidVodUploadContentType = errors.New("invalid vod upload content type")
 	ErrVodUploadTooLarge           = errors.New("vod upload is too large")
 	ErrInvalidVodUploadMetadata    = errors.New("invalid vod upload metadata")
+	ErrInvalidVodMetadataUpdate    = errors.New("invalid vod metadata update")
 	ErrVodNotDeletable             = errors.New("vod is not deletable")
 )
 
@@ -46,6 +47,12 @@ type CreateVodUploadResult struct {
 	ThumbnailStorageKey string
 }
 
+type UpdateVodMetadataParams struct {
+	UserID string
+	Title  *string
+	Game   *string
+}
+
 func NewVodService(vodRepository *repository.VodRepository, storageService *StorageService, thumbnailStorageService *StorageService, eventPublisher events.Publisher) *VodService {
 	return &VodService{
 		vodRepository,
@@ -61,6 +68,35 @@ func (s *VodService) GetVods(ctx context.Context, userID string) ([]repository.V
 
 func (s *VodService) GetVod(ctx context.Context, vodID string, userID string) (*repository.Vod, error) {
 	vod, err := s.vodRepository.GetByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrVodAccessDenied
+		}
+
+		return nil, err
+	}
+
+	return vod, nil
+}
+
+func (s *VodService) UpdateVodMetadata(ctx context.Context, vodID string, params UpdateVodMetadataParams) (*repository.Vod, error) {
+	title := trimOptionalString(params.Title)
+	game := trimOptionalString(params.Game)
+
+	if title == nil && game == nil {
+		return nil, ErrInvalidVodMetadataUpdate
+	}
+
+	if (title != nil && *title == "") || (game != nil && *game == "") {
+		return nil, ErrInvalidVodMetadataUpdate
+	}
+
+	vod, err := s.vodRepository.UpdateMetadataByIDAndUserID(ctx, repository.UpdateVodMetadataParams{
+		VodID:  vodID,
+		UserID: params.UserID,
+		Title:  title,
+		Game:   game,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrVodAccessDenied
@@ -215,6 +251,15 @@ func buildOriginalStorageKey(userID string, vodID string, fileName string) strin
 
 func buildThumbnailStorageKey(userID string, vodID string) string {
 	return fmt.Sprintf("users/%s/vods/%s/thumbnail.jpg", userID, vodID)
+}
+
+func trimOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+
+	trimmedValue := strings.TrimSpace(*value)
+	return &trimmedValue
 }
 
 func newUUID() (string, error) {

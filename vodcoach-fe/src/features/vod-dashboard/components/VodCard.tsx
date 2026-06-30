@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { EllipsisVertical } from "lucide-react";
 import { VOD_STATUS, type VodStatus } from "@/features/vod-dashboard/api";
 
 type DemoVodStatus = "Ready" | "Processing" | "Failed";
@@ -22,6 +23,7 @@ type VodCardProps = {
   thumbnailUrl?: string | null;
   title: string;
   onDeleteRequest?: () => void;
+  onEditRequest?: () => void;
 };
 
 const statusColor: Record<CardVodStatus, string> = {
@@ -50,6 +52,7 @@ export function VodCard({
   game,
   id,
   onDeleteRequest,
+  onEditRequest,
   reviewVodID = id,
   status,
   thumbnailUrl,
@@ -98,6 +101,7 @@ export function VodCard({
                 {game}
               </Text>
               <Badge
+                mt={6}
                 color={statusColor[status]}
                 variant="light"
                 w="fit-content"
@@ -110,6 +114,7 @@ export function VodCard({
             <VodCardMenu
               canDelete={canDelete}
               onDeleteRequest={onDeleteRequest}
+              onEditRequest={onEditRequest}
             />
           ) : null}
         </Group>
@@ -121,9 +126,11 @@ export function VodCard({
 function VodCardMenu({
   canDelete,
   onDeleteRequest,
+  onEditRequest,
 }: {
   canDelete: boolean;
   onDeleteRequest: () => void;
+  onEditRequest?: () => void;
 }) {
   return (
     <Menu position="bottom-end" shadow="md" width={180}>
@@ -134,10 +141,15 @@ function VodCardMenu({
           size="sm"
           variant="subtle"
         >
-          ⋮
+          <EllipsisVertical size={16} strokeWidth={2} />
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown className="vc-vod-action-menu">
+        {onEditRequest ? (
+          <Menu.Item className="vc-vod-action-item" onClick={onEditRequest}>
+            Edit
+          </Menu.Item>
+        ) : null}
         <Menu.Item
           className="vc-vod-action-delete"
           disabled={!canDelete}

@@ -10,6 +10,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { EllipsisVertical } from "lucide-react";
 import {
   getStorageObjectURL,
   VOD_STATUS,
@@ -32,6 +33,7 @@ type RecentVodListProps = {
   error: Error | null;
   isLoading: boolean;
   onDeleteVodRequest?: (vod: DashboardVod) => void;
+  onEditVodRequest?: (vod: DashboardVod) => void;
   vods: DashboardVod[];
 };
 
@@ -40,6 +42,7 @@ export function RecentVodList({
   error,
   isLoading,
   onDeleteVodRequest,
+  onEditVodRequest,
   vods,
 }: RecentVodListProps) {
   if (isLoading) {
@@ -74,6 +77,9 @@ export function RecentVodList({
           onDeleteRequest={
             onDeleteVodRequest ? () => onDeleteVodRequest(vod) : undefined
           }
+          onEditRequest={
+            onEditVodRequest ? () => onEditVodRequest(vod) : undefined
+          }
           vod={vod}
         />
       ))}
@@ -83,9 +89,11 @@ export function RecentVodList({
 
 function RecentVodRow({
   onDeleteRequest,
+  onEditRequest,
   vod,
 }: {
   onDeleteRequest?: () => void;
+  onEditRequest?: () => void;
   vod: DashboardVod;
 }) {
   const thumbnailUrl = getStorageObjectURL(
@@ -142,6 +150,7 @@ function RecentVodRow({
         <RecentVodMenu
           canDelete={canDelete}
           onDeleteRequest={onDeleteRequest}
+          onEditRequest={onEditRequest}
         />
       ) : null}
     </Paper>
@@ -151,9 +160,11 @@ function RecentVodRow({
 function RecentVodMenu({
   canDelete,
   onDeleteRequest,
+  onEditRequest,
 }: {
   canDelete: boolean;
   onDeleteRequest: () => void;
+  onEditRequest?: () => void;
 }) {
   return (
     <Menu position="bottom-end" shadow="md" width={180}>
@@ -164,10 +175,15 @@ function RecentVodMenu({
           size="sm"
           variant="subtle"
         >
-          ⋮
+          <EllipsisVertical size={16} strokeWidth={2} />
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown className="vc-vod-action-menu">
+        {onEditRequest ? (
+          <Menu.Item className="vc-vod-action-item" onClick={onEditRequest}>
+            Edit
+          </Menu.Item>
+        ) : null}
         <Menu.Item
           className="vc-vod-action-delete"
           disabled={!canDelete}

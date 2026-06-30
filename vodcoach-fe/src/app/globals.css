@@ -273,12 +273,15 @@ img {
   border-color: var(--vc-border);
 }
 
+.vc-vod-action-item,
 .vc-vod-action-delete {
-  color: red;
+  color: var(--vc-text);
 }
 
+.vc-vod-action-item:hover,
 .vc-vod-action-delete:hover {
   background: #2b2b2b;
+  color: var(--vc-text);
 }
 
 .mantine-Input-input {

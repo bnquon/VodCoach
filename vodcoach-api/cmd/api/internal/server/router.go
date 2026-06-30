@@ -53,6 +53,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	protected.Use(authmiddleware.Middleware())
 	protected.GET("/vods", vodHandler.GetVods)
 	protected.GET("/vods/:vodID", vodHandler.GetVod)
+	protected.PATCH("/vods/:vodID", vodHandler.UpdateVod)
 	protected.GET("/vods/:vodID/playback-url", vodHandler.CreateVodPlaybackURL)
 	protected.POST("/vods/upload", vodHandler.CreateUpload)
 	protected.POST("/vods/:vodID/upload-complete", vodHandler.CompleteUpload)

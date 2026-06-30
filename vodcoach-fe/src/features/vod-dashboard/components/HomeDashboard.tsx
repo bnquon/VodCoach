@@ -28,6 +28,7 @@ import {
 import {
   useAddVodToCache,
   useDeleteVod,
+  useUpdateVod,
   useVods,
 } from "@/features/vod-dashboard/hooks";
 import { clearAuth } from "@/lib/auth-storage";
@@ -39,16 +40,24 @@ export function HomeDashboard() {
   const { data: vods = [], error, isLoading } = useVods();
   const addVodToCache = useAddVodToCache();
   const deleteVod = useDeleteVod();
+  const updateVod = useUpdateVod();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<VodStatus | null>(null);
   const [vodPendingDelete, setVodPendingDelete] = useState<DashboardVod | null>(
     null,
   );
+  const [vodPendingEdit, setVodPendingEdit] = useState<DashboardVod | null>(
+    null,
+  );
+  const [editTitle, setEditTitle] = useState("");
+  const [editGame, setEditGame] = useState("");
   const recentVods = vods.slice(0, 4);
   const filteredVods = useMemo(
     () => filterVods(vods, searchQuery, statusFilter),
     [searchQuery, statusFilter, vods],
   );
+  const canSaveVodEdit =
+    editTitle.trim().length > 0 && editGame.trim().length > 0;
 
   function handleLogout() {
     clearAuth();
@@ -62,6 +71,35 @@ export function HomeDashboard() {
 
     deleteVod.mutate(vodPendingDelete.id);
     setVodPendingDelete(null);
+  }
+
+  function handleStartEditVod(vod: DashboardVod) {
+    setVodPendingEdit(vod);
+    setEditTitle(vod.title);
+    setEditGame(vod.game);
+  }
+
+  function handleCancelEditVod() {
+    setVodPendingEdit(null);
+    setEditTitle("");
+    setEditGame("");
+  }
+
+  function handleSaveVodEdit() {
+    if (!vodPendingEdit || !canSaveVodEdit) {
+      return;
+    }
+
+    updateVod.mutate(
+      {
+        vodID: vodPendingEdit.id,
+        title: editTitle.trim(),
+        game: editGame.trim(),
+      },
+      {
+        onSuccess: handleCancelEditVod,
+      },
+    );
   }
 
   return (
@@ -111,6 +149,7 @@ export function HomeDashboard() {
               error={error}
               isLoading={isLoading}
               onDeleteVodRequest={setVodPendingDelete}
+              onEditVodRequest={handleStartEditVod}
               vods={recentVods}
             />
           </Paper>
@@ -160,6 +199,7 @@ export function HomeDashboard() {
             error={error}
             isLoading={isLoading}
             onDeleteVodRequest={setVodPendingDelete}
+            onEditVodRequest={handleStartEditVod}
             vods={filteredVods}
           />
         </Stack>
@@ -190,6 +230,37 @@ export function HomeDashboard() {
               onClick={handleConfirmDeleteVod}
             >
               Delete
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+      <Modal
+        centered
+        opened={vodPendingEdit !== null}
+        title="Edit VOD"
+        onClose={handleCancelEditVod}
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Title"
+            value={editTitle}
+            onChange={(event) => setEditTitle(event.currentTarget.value)}
+          />
+          <TextInput
+            label="Game"
+            value={editGame}
+            onChange={(event) => setEditGame(event.currentTarget.value)}
+          />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={handleCancelEditVod}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!canSaveVodEdit}
+              loading={updateVod.isPending}
+              onClick={handleSaveVodEdit}
+            >
+              Save
             </Button>
           </Group>
         </Stack>
@@ -237,6 +308,7 @@ type VodGridProps = {
   error: Error | null;
   isLoading: boolean;
   onDeleteVodRequest: (vod: DashboardVod) => void;
+  onEditVodRequest: (vod: DashboardVod) => void;
   vods: DashboardVod[];
 };
 
@@ -245,6 +317,7 @@ function VodGrid({
   error,
   isLoading,
   onDeleteVodRequest,
+  onEditVodRequest,
   vods,
 }: VodGridProps) {
   if (isLoading) {
@@ -293,6 +366,7 @@ function VodGrid({
           )}
           title={vod.title}
           onDeleteRequest={() => onDeleteVodRequest(vod)}
+          onEditRequest={() => onEditVodRequest(vod)}
         />
       ))}
     </SimpleGrid>

@@ -24,13 +24,9 @@ import { UploadedVideoPlayer } from "./UploadedVideoPlayer";
 
 interface VodReviewWorkspaceProps {
   videoId: string;
-  vodTitle: string;
 }
 
-export function VodReviewWorkspace({
-  videoId,
-  vodTitle,
-}: VodReviewWorkspaceProps) {
+export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
   const { notes: fetchedNotes } = useVodNotes(videoId);
   const { annotations } = useVodAnnotations(videoId);
   const {
@@ -160,7 +156,6 @@ export function VodReviewWorkspace({
             <UploadedVideoPlayer
               drawingAnnotations={drawingAnnotations}
               src={playbackURL.playback_url}
-              title={vodTitle}
               isTheatreMode={isTheatreMode}
               videoRef={videoPlayerRef}
               onDurationChange={setDurationSeconds}

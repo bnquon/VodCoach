@@ -34,7 +34,6 @@ type UploadedVideoPlayerProps = {
   drawingAnnotations: DrawingAnnotation[];
   isTheatreMode: boolean;
   src: string;
-  title: string;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   onDurationChange?: (durationSeconds: number) => void;
   onSaveDrawingAnnotations: (
@@ -52,7 +51,6 @@ export function UploadedVideoPlayer({
   onTheatreModeChange,
   onTimeChange,
   src,
-  title,
   videoRef,
 }: UploadedVideoPlayerProps) {
   const [containerRef, containerRect] = useResizeObserver<HTMLDivElement>();
@@ -295,7 +293,6 @@ export function UploadedVideoPlayer({
     <Paper className="vc-elevated-card" p="md" radius="md">
       <Stack gap="sm">
         <Stack gap="sm">
-          <Text fw={600}>{title}</Text>
           <DrawingToolbar
             color={drawingColor}
             drawingModeEnabled={isDrawingModeEnabled}

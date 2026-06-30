@@ -48,6 +48,13 @@ type CompleteVodProcessingParams struct {
 	Height          int
 }
 
+type UpdateVodMetadataParams struct {
+	VodID  string
+	UserID string
+	Title  *string
+	Game   *string
+}
+
 func NewVodRepository(pool *pgxpool.Pool) *VodRepository {
 	return &VodRepository{
 		pool,
@@ -206,6 +213,50 @@ func (r *VodRepository) MarkUploadComplete(ctx context.Context, vodID string, us
 		`,
 		vodID,
 		userID,
+	).Scan(
+		&vod.ID,
+		&vod.UserID,
+		&vod.Title,
+		&vod.Game,
+		&vod.OriginalStorageKey,
+		&vod.ThumbnailStorageKey,
+		&vod.OriginalFilename,
+		&vod.ContentType,
+		&vod.DurationSeconds,
+		&vod.Width,
+		&vod.Height,
+		&vod.Status,
+		&vod.ProcessingProgress,
+		&vod.ErrorMessage,
+		&vod.CreatedAt,
+		&vod.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vod, nil
+}
+
+func (r *VodRepository) UpdateMetadataByIDAndUserID(ctx context.Context, params UpdateVodMetadataParams) (*Vod, error) {
+	var vod Vod
+
+	err := r.pool.QueryRow(
+		ctx,
+		`UPDATE vods
+		SET title = COALESCE($3, title),
+			game = COALESCE($4, game),
+			updated_at = now()
+		WHERE id = $1
+			AND user_id = $2
+		RETURNING id, user_id, title, game, original_storage_key, thumbnail_storage_key,
+			original_filename, content_type, duration_seconds, width, height, status, processing_progress,
+			error_message, created_at, updated_at
+		`,
+		params.VodID,
+		params.UserID,
+		params.Title,
+		params.Game,
 	).Scan(
 		&vod.ID,
 		&vod.UserID,

@@ -23,6 +23,11 @@ type CreateVodUploadRequestBody struct {
 	FileSizeBytes int64  `json:"file_size_bytes" binding:"required,min=1"`
 }
 
+type UpdateVodMetadataRequestBody struct {
+	Title *string `json:"title"`
+	Game  *string `json:"game"`
+}
+
 type VodResponse struct {
 	ID                  string    `json:"id"`
 	Title               string    `json:"title"`
@@ -86,6 +91,38 @@ func (h *VodHandler) GetVod(c *gin.Context) {
 		}
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get VOD"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.toVodResponse(*vod))
+}
+
+func (h *VodHandler) UpdateVod(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	var body UpdateVodMetadataRequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid VOD update request body"})
+		return
+	}
+
+	vod, err := h.vodService.UpdateVodMetadata(c.Request.Context(), vodID, services.UpdateVodMetadataParams{
+		UserID: userID,
+		Title:  body.Title,
+		Game:   body.Game,
+	})
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+		if errors.Is(err, services.ErrInvalidVodMetadataUpdate) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid VOD metadata"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update VOD"})
 		return
 	}
 

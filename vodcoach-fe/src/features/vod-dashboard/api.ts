@@ -64,6 +64,11 @@ export type CreateVodUploadResponse = {
   thumbnail_storage_key: string;
 };
 
+export type UpdateVodInput = {
+  title?: string;
+  game?: string;
+};
+
 type UploadVodFileInput = {
   uploadURL: string;
   file: File;
@@ -91,6 +96,12 @@ export async function getVods() {
 
 export async function getVod(vodID: string) {
   const response = await api.get<VodDTO>(`/vods/${vodID}`);
+
+  return response.data;
+}
+
+export async function updateVod(vodID: string, input: UpdateVodInput) {
+  const response = await api.patch<VodDTO>(`/vods/${vodID}`, input);
 
   return response.data;
 }
