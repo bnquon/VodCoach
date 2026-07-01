@@ -298,7 +298,6 @@ func (r *VodRepository) UpdateMetadataByIDAndUserID(ctx context.Context, params 
 			updated_at = now()
 		WHERE id = $1
 			AND user_id = $2
-			AND status IN ('failed', 'uploaded', 'processing')
 		RETURNING id, user_id, title, game, original_storage_key, thumbnail_storage_key,
 			original_filename, content_type, duration_seconds, width, height, status, processing_progress,
 			error_message, created_at, updated_at
