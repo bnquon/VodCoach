@@ -204,7 +204,7 @@ func processVodUploaded(
 	}
 
 	log.Printf("generating thumbnail: vod_id=%s", event.VodID)
-	thumbnailPath, err := mediaService.GenerateThumbnail(ctx, videoPath)
+	thumbnailPath, err := mediaService.GenerateThumbnail(ctx, videoPath, metadata.DurationSeconds)
 	if err != nil {
 		return err
 	}
