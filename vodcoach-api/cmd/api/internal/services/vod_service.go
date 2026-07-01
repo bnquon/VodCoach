@@ -5,6 +5,9 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -31,6 +34,7 @@ type VodService struct {
 	storageService          *StorageService
 	thumbnailStorageService *StorageService
 	eventPublisher          events.Publisher
+	workerHealthURL         string
 }
 
 type CreateVodUploadParams struct {
@@ -55,12 +59,13 @@ type UpdateVodMetadataParams struct {
 	Game   *string
 }
 
-func NewVodService(vodRepository *repository.VodRepository, storageService *StorageService, thumbnailStorageService *StorageService, eventPublisher events.Publisher) *VodService {
+func NewVodService(vodRepository *repository.VodRepository, storageService *StorageService, thumbnailStorageService *StorageService, eventPublisher events.Publisher, workerHealthURL string) *VodService {
 	return &VodService{
-		vodRepository,
-		storageService,
-		thumbnailStorageService,
-		eventPublisher,
+		vodRepository:           vodRepository,
+		storageService:          storageService,
+		thumbnailStorageService: thumbnailStorageService,
+		eventPublisher:          eventPublisher,
+		workerHealthURL:         strings.TrimSpace(workerHealthURL),
 	}
 }
 
@@ -203,6 +208,7 @@ func (s *VodService) CompleteVodUpload(ctx context.Context, vodID string, userID
 	}); err != nil {
 		return nil, err
 	}
+	s.wakeWorker()
 
 	return vod, nil
 }
@@ -241,8 +247,38 @@ func (s *VodService) RetryVodProcessing(ctx context.Context, vodID string, userI
 	}); err != nil {
 		return nil, err
 	}
+	s.wakeWorker()
 
 	return vod, nil
+}
+
+func (s *VodService) wakeWorker() {
+	if s.workerHealthURL == "" {
+		return
+	}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.workerHealthURL, nil)
+		if err != nil {
+			log.Printf("failed to build worker wake request: %v", err)
+			return
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Printf("failed to wake worker: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		_, _ = io.Copy(io.Discard, resp.Body)
+
+		if resp.StatusCode >= http.StatusBadRequest {
+			log.Printf("worker wake request returned status=%d", resp.StatusCode)
+		}
+	}()
 }
 
 func canRetryVodProcessing(vod repository.Vod, now time.Time) bool {
@@ -266,7 +302,7 @@ func (s *VodService) DeleteVod(ctx context.Context, vodID string, userID string)
 		return err
 	}
 
-	if vod.Status != "ready" && vod.Status != "failed" {
+	if !canDeleteVod(*vod, time.Now()) {
 		return ErrVodNotDeletable
 	}
 
@@ -289,6 +325,17 @@ func (s *VodService) DeleteVod(ctx context.Context, vodID string, userID string)
 	}
 
 	return nil
+}
+
+func canDeleteVod(vod repository.Vod, now time.Time) bool {
+	switch vod.Status {
+	case "ready", "failed", "uploaded", "pending_upload":
+		return true
+	case "processing":
+		return now.Sub(vod.UpdatedAt) >= staleProcessingRetryAfter
+	default:
+		return false
+	}
 }
 
 func buildOriginalStorageKey(userID string, vodID string, fileName string) string {

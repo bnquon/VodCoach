@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -27,7 +28,7 @@ func main() {
 	ctx := context.Background()
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("No .env file found; using environment variables")
 	}
 
 	dbURL := os.Getenv("DB_URL")
@@ -41,17 +42,22 @@ func main() {
 	}
 	defer pool.Close()
 
-	brokers := strings.Split(os.Getenv("REDPANDA_BROKERS"), ",")
-	if len(brokers) == 0 || strings.TrimSpace(brokers[0]) == "" {
+	brokers := events.ParseBrokerList(os.Getenv("REDPANDA_BROKERS"))
+	if len(brokers) == 0 {
 		log.Fatal("REDPANDA_BROKERS environment variable is required")
 	}
 
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(brokers...),
+	kafkaOptions, err := events.NewKafkaClientOptions(
+		brokers,
 		kgo.ConsumerGroup(workerConsumerGroup),
 		kgo.ConsumeTopics(events.VodUploadedTopic),
 		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client, err := kgo.NewClient(kafkaOptions...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,6 +79,7 @@ func main() {
 		originalBucketName,
 		thumbnailBucketName,
 	)
+	startHealthServer()
 
 	for {
 		fetches := client.PollFetches(ctx)
@@ -117,6 +124,27 @@ func main() {
 			}
 		}
 	}
+}
+
+func startHealthServer() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8081"
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok","service":"vodcoach-worker"}`))
+	})
+
+	go func() {
+		log.Printf("worker health server listening on :%s", port)
+		if err := http.ListenAndServe(":"+port, mux); err != nil {
+			log.Fatalf("worker health server failed: %v", err)
+		}
+	}()
 }
 
 func processVodUploaded(

@@ -22,6 +22,7 @@ type VodCardProps = {
   errorMessage?: string | null;
   game: string;
   id: string;
+  canDelete?: boolean;
   reviewVodID?: string;
   recovery?: VodRecovery | null;
   status: CardVodStatus;
@@ -56,6 +57,7 @@ const statusLabel: Record<CardVodStatus, string> = {
 
 export function VodCard({
   errorMessage,
+  canDelete = false,
   game,
   id,
   onDeleteRequest,
@@ -67,7 +69,6 @@ export function VodCard({
   thumbnailUrl,
   title,
 }: VodCardProps) {
-  const canDelete = status === VOD_STATUS.ready || status === VOD_STATUS.failed;
   const isFailed = status === VOD_STATUS.failed || status === "Failed";
 
   return (

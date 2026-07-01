@@ -2,6 +2,9 @@ package server
 
 import (
 	"net/http"
+	"os"
+	"slices"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	authmiddleware "github.com/bnquon/vodcoach-api/cmd/api/internal/auth"
@@ -34,7 +37,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	authService := services.NewAuthService(userRepository)
 	storageService := services.NewStorageService(r2BucketName, s3Client)
 	thumbnailStorageService := services.NewStorageService(r2ThumbnailBucketName, s3Client)
-	vodService := services.NewVodService(vodRepository, storageService, thumbnailStorageService, eventPublisher)
+	vodService := services.NewVodService(vodRepository, storageService, thumbnailStorageService, eventPublisher, os.Getenv("WORKER_HEALTH_URL"))
 	noteService := services.NewNoteService(noteRepository, vodRepository)
 	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
 	shareService := services.NewShareService(vodRepository, vodShareRepository, noteRepository, drawingRepository, storageService)
@@ -89,8 +92,15 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 }
 
 func corsMiddleware() gin.HandlerFunc {
+	allowedOrigins := getAllowedOrigins()
+
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "http://localhost:3000")
+		requestOrigin := c.Request.Header.Get("Origin")
+		if isAllowedOrigin(requestOrigin, allowedOrigins) {
+			c.Header("Access-Control-Allow-Origin", requestOrigin)
+			c.Header("Vary", "Origin")
+		}
+
 		c.Header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type,Authorization")
 
@@ -101,4 +111,30 @@ func corsMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func getAllowedOrigins() []string {
+	origins := []string{"http://localhost:3000"}
+	frontendOrigin := strings.TrimSpace(os.Getenv("FRONTEND_ORIGIN"))
+
+	if frontendOrigin == "" {
+		return origins
+	}
+
+	for origin := range strings.SplitSeq(frontendOrigin, ",") {
+		trimmedOrigin := strings.TrimSpace(origin)
+		if trimmedOrigin != "" {
+			origins = append(origins, trimmedOrigin)
+		}
+	}
+
+	return origins
+}
+
+func isAllowedOrigin(requestOrigin string, allowedOrigins []string) bool {
+	if requestOrigin == "" {
+		return false
+	}
+
+	return slices.Contains(allowedOrigins, requestOrigin)
 }

@@ -74,6 +74,21 @@ export function getVodRecovery(
   return null;
 }
 
+export function canDeleteVod(vod: RecoverableVod, nowMs: number | null) {
+  if (
+    vod.status === VOD_STATUS.ready ||
+    vod.status === VOD_STATUS.failed ||
+    vod.status === VOD_STATUS.uploaded ||
+    vod.status === VOD_STATUS.pendingUpload
+  ) {
+    return true;
+  }
+
+  const recovery = getVodRecovery(vod, nowMs);
+
+  return recovery !== null;
+}
+
 function getVodStatusAgeMs(updatedAt: string, nowMs: number) {
   const updatedAtMs = new Date(updatedAt).getTime();
 

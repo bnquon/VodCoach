@@ -243,7 +243,7 @@ func (h *VodHandler) DeleteVod(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, services.ErrVodNotDeletable) {
-			c.JSON(http.StatusConflict, gin.H{"error": "VOD cannot be deleted while it is processing"})
+			c.JSON(http.StatusConflict, gin.H{"error": "VOD cannot be deleted while processing is active"})
 			return
 		}
 

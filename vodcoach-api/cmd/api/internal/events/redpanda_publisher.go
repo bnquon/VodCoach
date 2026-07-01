@@ -12,9 +12,12 @@ type RedpandaPublisher struct {
 }
 
 func NewRedpandaPublisher(brokers []string) (*RedpandaPublisher, error) {
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(brokers...),
-	)
+	options, err := NewKafkaClientOptions(brokers)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := kgo.NewClient(options...)
 	if err != nil {
 		return nil, err
 	}
