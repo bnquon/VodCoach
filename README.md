@@ -8,7 +8,26 @@ The project was motivated by how fragmented TFT coaching sessions can be. Review
 
 ## Demo
 
-TODO: Add demo video, screenshots, and deployed link.
+> Live app: [vod-coach.vercel.app](https://vod-coach.vercel.app)  
+> Note: The app is deployed on free-tier services, so the backend or worker may be asleep on first load. If something feels slow, wait a few seconds and retry.
+
+> This demo was recorded on the live web app. The backend and worker were pre-woken for a smoother walkthrough.
+
+<video src="https://github.com/user-attachments/assets/b72df776-590a-4c67-bffa-78e11a05d5c1" controls width="100%"></video>
+
+### Walkthrough
+
+| Time | What happens |
+|---:|---|
+| `0:03` | Upload a personal VOD. |
+| `0:23` | Upload finishes and the worker processes the VOD thumbnail. |
+| `0:34` | Add a timestamped note linked to the current video time. |
+| `0:54` | Create a shareable link with `Commenter` permissions. |
+| `1:03` | Open the share link in an incognito tab as a guest user. |
+| `1:23` | Enable drawing mode and add a circle annotation on the video. |
+| `1:37` | Add a general note. |
+| `1:50` | Return to the logged-in user view and confirm the guest note/drawing were added. |
+| `2:00` | Revoke the share link and show that the guest link is no longer valid. |
 
 ## Features
 
