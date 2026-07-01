@@ -116,7 +116,7 @@ body {
 
 .vc-recent-vod-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 16px;
   align-items: center;
   background: var(--vc-card);
@@ -262,6 +262,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   background:
     linear-gradient(135deg, rgb(229 231 235 / 8%), transparent),
     var(--vc-elevated-card);
@@ -289,6 +290,26 @@ img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.vc-vod-card-failed-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 54%);
+}
+
+.vc-playback-error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 68%);
+  color: var(--vc-text);
+  text-align: center;
 }
 
 .vc-vod-action-button {
@@ -519,7 +540,7 @@ img {
   }
 
   .vc-recent-vod-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 
   .vc-recent-vod-row .mantine-Badge-root {

@@ -75,11 +75,25 @@ export function useRevokeVodShare(vodID: string) {
 }
 
 export function useCreateShareSession(shareToken: string) {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (guestName: string) =>
       createShareSession(shareToken, guestName),
     onSuccess: (session: ShareSessionResponse) => {
       setShareSessionToken(shareToken, session.token);
+      queryClient.invalidateQueries({
+        queryKey: sharedVodQueryKey(shareToken),
+      });
+      queryClient.invalidateQueries({
+        queryKey: sharedPlaybackURLQueryKey(shareToken),
+      });
+      queryClient.invalidateQueries({
+        queryKey: sharedNotesQueryKey(shareToken),
+      });
+      queryClient.invalidateQueries({
+        queryKey: sharedAnnotationsQueryKey(shareToken),
+      });
     },
   });
 }

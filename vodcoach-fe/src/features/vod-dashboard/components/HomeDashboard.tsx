@@ -28,6 +28,7 @@ import {
 import {
   useAddVodToCache,
   useDeleteVod,
+  useRetryVodProcessing,
   useUpdateVod,
   useVods,
 } from "@/features/vod-dashboard/hooks";
@@ -37,9 +38,10 @@ import { useAuthUser } from "@/lib/use-auth";
 export function HomeDashboard() {
   const router = useRouter();
   const user = useAuthUser();
-  const { data: vods = [], error, isLoading } = useVods();
+  const { data: vods = [], error, isLoading, refetch } = useVods();
   const addVodToCache = useAddVodToCache();
   const deleteVod = useDeleteVod();
+  const retryVodProcessing = useRetryVodProcessing();
   const updateVod = useUpdateVod();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<VodStatus | null>(null);
@@ -150,6 +152,8 @@ export function HomeDashboard() {
               isLoading={isLoading}
               onDeleteVodRequest={setVodPendingDelete}
               onEditVodRequest={handleStartEditVod}
+              onRetryLoad={() => refetch()}
+              onRetryVodRequest={(vod) => retryVodProcessing.mutate(vod.id)}
               vods={recentVods}
             />
           </Paper>
@@ -200,6 +204,8 @@ export function HomeDashboard() {
             isLoading={isLoading}
             onDeleteVodRequest={setVodPendingDelete}
             onEditVodRequest={handleStartEditVod}
+            onRetryVodRequest={(vod) => retryVodProcessing.mutate(vod.id)}
+            onRetryLoad={() => refetch()}
             vods={filteredVods}
           />
         </Stack>
@@ -309,6 +315,8 @@ type VodGridProps = {
   isLoading: boolean;
   onDeleteVodRequest: (vod: DashboardVod) => void;
   onEditVodRequest: (vod: DashboardVod) => void;
+  onRetryLoad: () => void;
+  onRetryVodRequest: (vod: DashboardVod) => void;
   vods: DashboardVod[];
 };
 
@@ -318,6 +326,8 @@ function VodGrid({
   isLoading,
   onDeleteVodRequest,
   onEditVodRequest,
+  onRetryLoad,
+  onRetryVodRequest,
   vods,
 }: VodGridProps) {
   if (isLoading) {
@@ -331,9 +341,14 @@ function VodGrid({
   if (error) {
     return (
       <Paper className="vc-card" p="md" radius="md">
-        <Text size="sm" c="red">
-          Failed to load VODs
-        </Text>
+        <Group justify="space-between">
+          <Text size="sm" c="red">
+            Failed to load VODs
+          </Text>
+          <Button size="compact-sm" variant="light" onClick={onRetryLoad}>
+            Retry
+          </Button>
+        </Group>
       </Paper>
     );
   }
@@ -359,6 +374,7 @@ function VodGrid({
           key={vod.id}
           game={vod.game}
           id={vod.id}
+          errorMessage={vod.error_message}
           status={vod.status}
           thumbnailUrl={getStorageObjectURL(
             vod.thumbnail_storage_key,
@@ -367,6 +383,7 @@ function VodGrid({
           title={vod.title}
           onDeleteRequest={() => onDeleteVodRequest(vod)}
           onEditRequest={() => onEditVodRequest(vod)}
+          onRetryRequest={() => onRetryVodRequest(vod)}
         />
       ))}
     </SimpleGrid>

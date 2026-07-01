@@ -13,13 +13,14 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { registerUser } from "@/lib/auth-api";
 import { saveAuth } from "@/lib/auth-storage";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -31,6 +32,7 @@ export default function RegisterPage() {
         return;
       }
 
+      queryClient.clear();
       saveAuth(response);
       router.replace("/");
     },

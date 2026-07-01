@@ -5,6 +5,7 @@ import {
   deleteVod,
   getVod,
   getVods,
+  retryVodProcessing,
   updateVod,
   VOD_STATUS,
   type UpdateVodInput,
@@ -100,6 +101,51 @@ export function useDeleteVod() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: vodsQueryKey });
+    },
+  });
+}
+
+export function useRetryVodProcessing() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: retryVodProcessing,
+    onMutate: async (vodID) => {
+      await queryClient.cancelQueries({ queryKey: vodsQueryKey });
+
+      const previousVods = queryClient.getQueryData<VodDTO[]>(vodsQueryKey);
+
+      queryClient.setQueryData<VodDTO[]>(vodsQueryKey, (currentVods) =>
+        (currentVods ?? []).map((vod) =>
+          vod.id === vodID
+            ? {
+                ...vod,
+                status: VOD_STATUS.uploaded,
+                processing_progress: 0,
+                error_message: null,
+              }
+            : vod,
+        ),
+      );
+
+      return { previousVods };
+    },
+    onError: (error, _vodID, context) => {
+      queryClient.setQueryData(vodsQueryKey, context?.previousVods);
+      toast.error(getVodMutationErrorMessage(error, "Failed to retry VOD"));
+    },
+    onSuccess: (updatedVod) => {
+      queryClient.setQueryData<VodDTO[]>(vodsQueryKey, (currentVods) =>
+        (currentVods ?? []).map((vod) =>
+          vod.id === updatedVod.id ? updatedVod : vod,
+        ),
+      );
+      queryClient.setQueryData(vodQueryKey(updatedVod.id), updatedVod);
+      toast.success("VOD retry queued");
+    },
+    onSettled: (_data, _error, vodID) => {
+      queryClient.invalidateQueries({ queryKey: vodsQueryKey });
+      queryClient.invalidateQueries({ queryKey: vodQueryKey(vodID) });
     },
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { SubmitEvent, useState } from "react";
+import { SubmitEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -28,6 +28,15 @@ export function AppFooter() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    const timeoutID = window.setTimeout(() => {
+      setCurrentYear(new Date().getFullYear());
+    }, 0);
+
+    return () => window.clearTimeout(timeoutID);
+  }, []);
 
   if (pathname.startsWith("/shared/") || pathname.startsWith("/vods/")) {
     return null;
@@ -97,7 +106,7 @@ export function AppFooter() {
           </Group>
 
           <Text c="dimmed" size="xs">
-            Copyright {new Date().getFullYear()} VODCoach. All rights reserved.
+            Copyright {currentYear ?? ""} VODCoach. All rights reserved.
           </Text>
         </Stack>
 

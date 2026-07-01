@@ -22,6 +22,10 @@ export function setShareSessionToken(shareToken: string, sessionToken: string) {
   localStorage.setItem(getShareSessionTokenKey(shareToken), sessionToken);
 }
 
+export function clearShareSessionToken(shareToken: string) {
+  localStorage.removeItem(getShareSessionTokenKey(shareToken));
+}
+
 function getShareGuestNameKey(shareToken: string) {
   return `vodcoach_share_guest_name:${shareToken}`;
 }

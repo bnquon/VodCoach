@@ -32,7 +32,9 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
   const {
     data: playbackURL,
     error: playbackURLError,
+    isFetching: isPlaybackURLFetching,
     isLoading: isPlaybackURLLoading,
+    refetch: refetchPlaybackURL,
   } = useVodPlaybackURL(videoId);
   const createNote = useCreateVodNote(videoId);
   const updateNote = useUpdateVodNote(videoId);
@@ -157,8 +159,10 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
               drawingAnnotations={drawingAnnotations}
               src={playbackURL.playback_url}
               isTheatreMode={isTheatreMode}
+              isRefreshingPlayback={isPlaybackURLFetching}
               videoRef={videoPlayerRef}
               onDurationChange={setDurationSeconds}
+              onRefreshPlayback={() => refetchPlaybackURL()}
               onSaveDrawingAnnotations={handleSaveDrawingAnnotations}
               onTheatreModeChange={setIsTheatreMode}
               onTimeChange={setCurrentTimeSeconds}

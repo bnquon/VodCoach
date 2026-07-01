@@ -3,11 +3,13 @@ import {
   ActionIcon,
   Badge,
   Box,
+  Button,
   Group,
   Menu,
   Paper,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { EllipsisVertical } from "lucide-react";
 import { VOD_STATUS, type VodStatus } from "@/features/vod-dashboard/api";
@@ -16,6 +18,7 @@ type DemoVodStatus = "Ready" | "Processing" | "Failed";
 type CardVodStatus = DemoVodStatus | VodStatus;
 
 type VodCardProps = {
+  errorMessage?: string | null;
   game: string;
   id: string;
   reviewVodID?: string;
@@ -24,6 +27,7 @@ type VodCardProps = {
   title: string;
   onDeleteRequest?: () => void;
   onEditRequest?: () => void;
+  onRetryRequest?: () => void;
 };
 
 const statusColor: Record<CardVodStatus, string> = {
@@ -49,6 +53,7 @@ const statusLabel: Record<CardVodStatus, string> = {
 };
 
 export function VodCard({
+  errorMessage,
   game,
   id,
   onDeleteRequest,
@@ -57,8 +62,10 @@ export function VodCard({
   status,
   thumbnailUrl,
   title,
+  onRetryRequest,
 }: VodCardProps) {
   const canDelete = status === VOD_STATUS.ready || status === VOD_STATUS.failed;
+  const isFailed = status === VOD_STATUS.failed || status === "Failed";
 
   return (
     <Paper className="vc-card vc-vod-card" p="sm" radius="md">
@@ -83,6 +90,21 @@ export function VodCard({
                 </Text>
               </Stack>
             )}
+            {isFailed && onRetryRequest ? (
+              <Box className="vc-vod-card-failed-overlay">
+                <Button
+                  size="compact-sm"
+                  variant="filled"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onRetryRequest();
+                  }}
+                >
+                  Retry processing
+                </Button>
+              </Box>
+            ) : null}
           </Paper>
         </Box>
         <Group align="start" gap="xs" justify="space-between" wrap="nowrap">
@@ -108,6 +130,13 @@ export function VodCard({
               >
                 {statusLabel[status]}
               </Badge>
+              {isFailed && errorMessage ? (
+                <Tooltip label={errorMessage} multiline withArrow>
+                  <Text c="red" lineClamp={2} size="xs">
+                    {errorMessage}
+                  </Text>
+                </Tooltip>
+              ) : null}
             </Stack>
           </Box>
           {onDeleteRequest ? (

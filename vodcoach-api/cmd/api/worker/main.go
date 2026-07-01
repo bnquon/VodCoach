@@ -105,6 +105,12 @@ func main() {
 				event,
 			); err != nil {
 				log.Printf("failed to process vod uploaded event for vod %s: %v", event.VodID, err)
+				if markErr := vodRepository.MarkProcessingFailed(ctx, repository.MarkVodProcessingFailedParams{
+					VodID:        event.VodID,
+					ErrorMessage: compactErrorMessage(err),
+				}); markErr != nil {
+					log.Printf("failed to mark vod failed: vod_id=%s error=%v", event.VodID, markErr)
+				}
 				continue
 			}
 		}
@@ -210,4 +216,15 @@ func requiredEnv(key string) string {
 	}
 
 	return value
+}
+
+func compactErrorMessage(err error) string {
+	const maxErrorMessageLength = 240
+
+	message := strings.TrimSpace(err.Error())
+	if len(message) <= maxErrorMessageLength {
+		return message
+	}
+
+	return message[:maxErrorMessageLength] + "..."
 }

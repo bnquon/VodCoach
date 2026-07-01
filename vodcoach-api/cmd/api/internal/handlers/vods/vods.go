@@ -210,6 +210,28 @@ func (h *VodHandler) CompleteUpload(c *gin.Context) {
 	c.JSON(http.StatusOK, h.toVodResponse(*vod))
 }
 
+func (h *VodHandler) RetryProcessing(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	vod, err := h.vodService.RetryVodProcessing(c.Request.Context(), vodID, userID)
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+		if errors.Is(err, services.ErrVodNotRetryable) {
+			c.JSON(http.StatusConflict, gin.H{"error": "Only failed VODs can be retried"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retry VOD processing"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.toVodResponse(*vod))
+}
+
 func (h *VodHandler) DeleteVod(c *gin.Context) {
 	userID := c.GetString(auth.UserIDContextKey)
 	vodID := c.Param("vodID")

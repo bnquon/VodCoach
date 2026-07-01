@@ -3,7 +3,9 @@ import {
   ActionIcon,
   Badge,
   Box,
+  Button,
   Center,
+  Group,
   Loader,
   Menu,
   Paper,
@@ -21,6 +23,7 @@ export type DashboardVod = Pick<
   VodDTO,
   | "game"
   | "id"
+  | "error_message"
   | "processing_progress"
   | "status"
   | "thumbnail_storage_key"
@@ -34,6 +37,8 @@ type RecentVodListProps = {
   isLoading: boolean;
   onDeleteVodRequest?: (vod: DashboardVod) => void;
   onEditVodRequest?: (vod: DashboardVod) => void;
+  onRetryLoad?: () => void;
+  onRetryVodRequest?: (vod: DashboardVod) => void;
   vods: DashboardVod[];
 };
 
@@ -43,6 +48,8 @@ export function RecentVodList({
   isLoading,
   onDeleteVodRequest,
   onEditVodRequest,
+  onRetryLoad,
+  onRetryVodRequest,
   vods,
 }: RecentVodListProps) {
   if (isLoading) {
@@ -55,9 +62,16 @@ export function RecentVodList({
 
   if (error) {
     return (
-      <Text size="sm" c="red">
-        Failed to load VODs
-      </Text>
+      <Group justify="space-between">
+        <Text size="sm" c="red">
+          Failed to load VODs
+        </Text>
+        {onRetryLoad ? (
+          <Button size="compact-xs" variant="light" onClick={onRetryLoad}>
+            Retry
+          </Button>
+        ) : null}
+      </Group>
     );
   }
 
@@ -80,6 +94,9 @@ export function RecentVodList({
           onEditRequest={
             onEditVodRequest ? () => onEditVodRequest(vod) : undefined
           }
+          onRetryRequest={
+            onRetryVodRequest ? () => onRetryVodRequest(vod) : undefined
+          }
           vod={vod}
         />
       ))}
@@ -90,10 +107,12 @@ export function RecentVodList({
 function RecentVodRow({
   onDeleteRequest,
   onEditRequest,
+  onRetryRequest,
   vod,
 }: {
   onDeleteRequest?: () => void;
   onEditRequest?: () => void;
+  onRetryRequest?: () => void;
   vod: DashboardVod;
 }) {
   const thumbnailUrl = getStorageObjectURL(
@@ -141,11 +160,29 @@ function RecentVodRow({
               />
             </Box>
           ) : null}
+          {vod.status === VOD_STATUS.failed && vod.error_message ? (
+            <Text c="red" lineClamp={1} size="xs">
+              {vod.error_message}
+            </Text>
+          ) : null}
         </Stack>
       </Box>
       <Badge color={getStatusColor(vod.status)} variant="light" w="fit-content">
         {getStatusLabel(vod.status)}
       </Badge>
+      {vod.status === VOD_STATUS.failed && onRetryRequest ? (
+        <Button
+          size="compact-xs"
+          variant="light"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onRetryRequest();
+          }}
+        >
+          Retry
+        </Button>
+      ) : null}
       {onDeleteRequest ? (
         <RecentVodMenu
           canDelete={canDelete}

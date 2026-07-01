@@ -22,6 +22,7 @@ var (
 	ErrInvalidVodUploadMetadata    = errors.New("invalid vod upload metadata")
 	ErrInvalidVodMetadataUpdate    = errors.New("invalid vod metadata update")
 	ErrVodNotDeletable             = errors.New("vod is not deletable")
+	ErrVodNotRetryable             = errors.New("vod is not retryable")
 )
 
 type VodService struct {
@@ -193,6 +194,41 @@ func (s *VodService) CompleteVodUpload(ctx context.Context, vodID string, userID
 
 	// This hands the slow post-upload work to the worker. The worker consumes
 	// vod.uploaded and updates this same VOD row through Postgres.
+	if err := s.eventPublisher.PublishVodUploaded(ctx, events.VodUploadedEvent{
+		VodID:              vod.ID,
+		UserID:             vod.UserID,
+		OriginalStorageKey: vod.OriginalStorageKey,
+		UploadedAt:         vod.UpdatedAt,
+	}); err != nil {
+		return nil, err
+	}
+
+	return vod, nil
+}
+
+func (s *VodService) RetryVodProcessing(ctx context.Context, vodID string, userID string) (*repository.Vod, error) {
+	currentVod, err := s.vodRepository.GetByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrVodAccessDenied
+		}
+
+		return nil, err
+	}
+
+	if currentVod.Status != "failed" {
+		return nil, ErrVodNotRetryable
+	}
+
+	vod, err := s.vodRepository.MarkRetryQueuedByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrVodNotRetryable
+		}
+
+		return nil, err
+	}
+
 	if err := s.eventPublisher.PublishVodUploaded(ctx, events.VodUploadedEvent{
 		VodID:              vod.ID,
 		UserID:             vod.UserID,

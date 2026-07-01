@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AspectRatio, Box, Paper, Stack } from "@mantine/core";
+import { AspectRatio, Box, Button, Paper, Stack, Text } from "@mantine/core";
 import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { Circle, Layer, Line, Rect, Stage } from "react-konva";
@@ -36,7 +36,9 @@ type UploadedVideoPlayerProps = {
   isTheatreMode: boolean;
   src: string;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  isRefreshingPlayback?: boolean;
   onDurationChange?: (durationSeconds: number) => void;
+  onRefreshPlayback?: () => void;
   onSaveDrawingAnnotations: (
     drawingAnnotations: DrawingAnnotation[],
   ) => Promise<void>;
@@ -48,7 +50,9 @@ export function UploadedVideoPlayer({
   canDraw = true,
   drawingAnnotations,
   isTheatreMode,
+  isRefreshingPlayback = false,
   onDurationChange,
+  onRefreshPlayback,
   onSaveDrawingAnnotations,
   onTheatreModeChange,
   onTimeChange,
@@ -65,6 +69,7 @@ export function UploadedVideoPlayer({
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [tool, setTool] = useState<DrawingTool>(DRAWING_TOOL.pen);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
+  const [hasPlaybackError, setHasPlaybackError] = useState(false);
   const activeAnnotationId = useRef<string | null>(null);
   const isDrawing = useRef(false);
   const isSavingDrawings = useRef(false);
@@ -268,6 +273,7 @@ export function UploadedVideoPlayer({
       return;
     }
 
+    setHasPlaybackError(false);
     video.src = src;
     video.load();
 
@@ -322,6 +328,7 @@ export function UploadedVideoPlayer({
             onLoadedMetadata={(event) =>
               onDurationChange?.(event.currentTarget.duration)
             }
+            onError={() => setHasPlaybackError(true)}
             onTimeUpdate={(event) => handleTimeUpdate(event.currentTarget)}
           />
           <Box
@@ -403,6 +410,23 @@ export function UploadedVideoPlayer({
               </Layer>
             </Stage>
           </Box>
+          {hasPlaybackError ? (
+            <Box className="vc-playback-error-overlay">
+              <Stack align="center" gap="xs">
+                <Text fw={700} size="sm">
+                  Video link expired or failed to load
+                </Text>
+                <Button
+                  loading={isRefreshingPlayback}
+                  size="compact-sm"
+                  variant="filled"
+                  onClick={onRefreshPlayback}
+                >
+                  Refresh video
+                </Button>
+              </Stack>
+            </Box>
+          ) : null}
         </AspectRatio>
       </Stack>
     </Paper>

@@ -62,6 +62,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	protected.GET("/vods/:vodID/playback-url", vodHandler.CreateVodPlaybackURL)
 	protected.POST("/vods/upload", vodHandler.CreateUpload)
 	protected.POST("/vods/:vodID/upload-complete", vodHandler.CompleteUpload)
+	protected.POST("/vods/:vodID/retry-processing", vodHandler.RetryProcessing)
 	protected.DELETE("/vods/:vodID", vodHandler.DeleteVod)
 	protected.POST("/vods/:vodID/shares", shareHandler.CreateShare)
 	protected.GET("/vods/:vodID/shares", shareHandler.GetShares)

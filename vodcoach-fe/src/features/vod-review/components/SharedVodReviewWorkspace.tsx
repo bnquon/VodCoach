@@ -34,7 +34,9 @@ export function SharedVodReviewWorkspace({
   const {
     data: playbackURL,
     error: playbackURLError,
+    isFetching: isPlaybackURLFetching,
     isLoading: isPlaybackURLLoading,
+    refetch: refetchPlaybackURL,
   } = useSharedPlaybackURL(shareToken, true);
   const createNote = useCreateSharedNote(shareToken);
   const createDrawingsBatch = useCreateSharedDrawingsBatch(shareToken);
@@ -112,8 +114,10 @@ export function SharedVodReviewWorkspace({
               drawingAnnotations={drawingAnnotations}
               src={playbackURL.playback_url}
               isTheatreMode={isTheatreMode}
+              isRefreshingPlayback={isPlaybackURLFetching}
               videoRef={videoPlayerRef}
               onDurationChange={setDurationSeconds}
+              onRefreshPlayback={() => refetchPlaybackURL()}
               onSaveDrawingAnnotations={handleSaveDrawingAnnotations}
               onTheatreModeChange={setIsTheatreMode}
               onTimeChange={setCurrentTimeSeconds}

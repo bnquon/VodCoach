@@ -15,7 +15,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { Dropzone, MIME_TYPES, type FileWithPath } from "@mantine/dropzone";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleX } from "lucide-react";
 import { toast } from "react-toastify";
 import {
@@ -24,6 +24,7 @@ import {
   uploadVodFile,
   type VodDTO,
 } from "@/features/vod-dashboard/api";
+import { vodsQueryKey } from "@/features/vod-dashboard/hooks";
 
 type DashboardUploadCardProps = {
   onUploadComplete?: (vod: VodDTO) => void;
@@ -83,6 +84,7 @@ function formatFileSize(bytes: number) {
 export function DashboardUploadCard({
   onUploadComplete,
 }: DashboardUploadCardProps) {
+  const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<FileWithPath | null>(null);
   const [title, setTitle] = useState("");
   const [game, setGame] = useState("");
@@ -129,6 +131,7 @@ export function DashboardUploadCard({
     },
     onSuccess: (vod) => {
       toast.success("VOD uploaded");
+      queryClient.invalidateQueries({ queryKey: vodsQueryKey });
       onUploadComplete?.(vod);
       setSelectedFile(null);
       setTitle("");

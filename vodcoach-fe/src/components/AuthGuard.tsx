@@ -1,8 +1,8 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 import { Center, Loader } from "@mantine/core";
-import { useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import { clearAuth, isAuthTokenExpired } from "@/lib/auth-storage";
 import { useAuthToken } from "@/lib/use-auth";
 
@@ -11,26 +11,23 @@ type AuthGuardProps = {
 };
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const router = useRouter();
   const token = useAuthToken();
   const isExpired = token ? isAuthTokenExpired(token) : false;
 
-  useEffect(() => {
-    if (token === null || isExpired) {
-      if (isExpired) {
-        clearAuth();
-      }
-
-      router.replace("/login");
-    }
-  }, [isExpired, router, token]);
-
-  if (!token || isExpired) {
+  if (token === undefined) {
     return (
       <Center h="100vh">
         <Loader />
       </Center>
     );
+  }
+
+  if (isExpired) {
+    clearAuth();
+  }
+
+  if (!token || isExpired) {
+    redirect("/login");
   }
 
   return children;

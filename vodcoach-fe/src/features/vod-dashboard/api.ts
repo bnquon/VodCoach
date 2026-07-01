@@ -112,6 +112,12 @@ export async function completeVodUpload(vodID: string) {
   return response.data;
 }
 
+export async function retryVodProcessing(vodID: string) {
+  const response = await api.post<VodDTO>(`/vods/${vodID}/retry-processing`);
+
+  return response.data;
+}
+
 export async function deleteVod(vodID: string) {
   await api.delete(`/vods/${vodID}`);
 }
