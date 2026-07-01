@@ -86,6 +86,72 @@ body {
   margin-bottom: -4px;
 }
 
+.vc-auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.vc-auth-shell {
+  width: min(100%, 920px);
+  min-height: min(600px, calc(100vh - 56px));
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  overflow: hidden;
+  border: 1px solid var(--vc-border);
+  border-radius: 18px;
+  background: var(--vc-card);
+  box-shadow: var(--vc-elevated-shadow);
+}
+
+.vc-auth-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: clamp(24px, 4vw, 44px);
+  border: 0;
+  border-radius: 0;
+  color: var(--vc-text);
+  background: var(--vc-card);
+}
+
+.vc-auth-card > .mantine-Stack-root {
+  width: min(100%, 360px);
+}
+
+.vc-auth-inline-link {
+  color: var(--vc-accent-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.vc-auth-inline-link:hover {
+  color: var(--vc-accent);
+}
+
+.vc-auth-image-panel {
+  position: relative;
+  min-height: 100%;
+  background: var(--vc-elevated-card);
+}
+
+.vc-auth-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.vc-auth-image-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 8%), rgb(0 0 0 / 46%)),
+    radial-gradient(circle at 25% 20%, var(--vc-accent-soft), transparent 22rem);
+}
+
 .vc-dashboard-top-grid {
   display: grid;
   grid-template-columns: 395px minmax(0, 1fr);
@@ -494,6 +560,15 @@ img {
 }
 
 @media (max-width: 1000px) {
+  .vc-auth-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .vc-auth-image-panel {
+    display: none;
+  }
+
   .vc-dashboard-top-grid {
     grid-template-columns: 1fr;
   }
@@ -510,6 +585,25 @@ img {
 }
 
 @media (max-width: 640px) {
+  .vc-auth-page {
+    padding: 16px;
+    place-items: stretch;
+  }
+
+  .vc-auth-shell {
+    min-height: calc(100vh - 32px);
+    border-radius: 14px;
+  }
+
+  .vc-auth-card {
+    align-items: flex-start;
+    padding: 22px;
+  }
+
+  .vc-auth-card > .mantine-Stack-root {
+    width: 100%;
+  }
+
   .vc-dashboard-app {
     padding: 0 16px 40px;
   }

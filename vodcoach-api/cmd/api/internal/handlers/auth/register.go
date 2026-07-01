@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/services"
@@ -32,6 +33,11 @@ func (h *RegisterHandler) Register(c *gin.Context) {
 
 	response, err := h.authService.Register(c.Request.Context(), body.Email, body.Password)
 	if err != nil {
+		if errors.Is(err, services.ErrWeakPassword) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Password must be at least 7 characters and include an uppercase letter and a symbol"})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
 		return
 	}

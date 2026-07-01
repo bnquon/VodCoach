@@ -38,7 +38,14 @@ export function AppFooter() {
     return () => window.clearTimeout(timeoutID);
   }, []);
 
-  if (pathname.startsWith("/shared/") || pathname.startsWith("/vods/")) {
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
+    pathname.startsWith("/shared/") ||
+    pathname.startsWith("/vods/")
+  ) {
     return null;
   }
 
