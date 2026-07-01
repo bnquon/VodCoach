@@ -1,9 +1,9 @@
 package server
 
 import (
-	"slices"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -37,7 +37,7 @@ func NewRouter(pool *pgxpool.Pool, r2BucketName string, r2ThumbnailBucketName st
 	authService := services.NewAuthService(userRepository)
 	storageService := services.NewStorageService(r2BucketName, s3Client)
 	thumbnailStorageService := services.NewStorageService(r2ThumbnailBucketName, s3Client)
-	vodService := services.NewVodService(vodRepository, storageService, thumbnailStorageService, eventPublisher)
+	vodService := services.NewVodService(vodRepository, storageService, thumbnailStorageService, eventPublisher, os.Getenv("WORKER_HEALTH_URL"))
 	noteService := services.NewNoteService(noteRepository, vodRepository)
 	annotationService := services.NewAnnotationService(noteRepository, drawingRepository, vodRepository)
 	shareService := services.NewShareService(vodRepository, vodShareRepository, noteRepository, drawingRepository, storageService)

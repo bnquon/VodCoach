@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -78,6 +79,7 @@ func main() {
 		originalBucketName,
 		thumbnailBucketName,
 	)
+	startHealthServer()
 
 	for {
 		fetches := client.PollFetches(ctx)
@@ -122,6 +124,27 @@ func main() {
 			}
 		}
 	}
+}
+
+func startHealthServer() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8081"
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok","service":"vodcoach-worker"}`))
+	})
+
+	go func() {
+		log.Printf("worker health server listening on :%s", port)
+		if err := http.ListenAndServe(":"+port, mux); err != nil {
+			log.Fatalf("worker health server failed: %v", err)
+		}
+	}()
 }
 
 func processVodUploaded(
