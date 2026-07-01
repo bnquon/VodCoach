@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -8,6 +8,7 @@ import {
   Center,
   Group,
   Loader,
+  Modal,
   Paper,
   Select,
   SimpleGrid,
@@ -20,30 +21,120 @@ import { DashboardUploadCard } from "./DashboardUploadCard";
 import { RecentVodList, type DashboardVod } from "./RecentVodList";
 import { VodCard } from "./VodCard";
 import {
-  getStorageObjectURL,
   VOD_STATUS,
+  getStorageObjectURL,
   type VodStatus,
 } from "@/features/vod-dashboard/api";
-import { useAddVodToCache, useVods } from "@/features/vod-dashboard/hooks";
+import {
+  useAddVodToCache,
+  useCompleteVodUpload,
+  useDeleteVod,
+  useRetryVodProcessing,
+  useUpdateVod,
+  useVods,
+} from "@/features/vod-dashboard/hooks";
+import {
+  VOD_RECOVERY_ACTION,
+  getVodRecovery,
+} from "@/features/vod-dashboard/recovery";
 import { clearAuth } from "@/lib/auth-storage";
 import { useAuthUser } from "@/lib/use-auth";
 
 export function HomeDashboard() {
   const router = useRouter();
   const user = useAuthUser();
-  const { data: vods = [], error, isLoading } = useVods();
+  const { data: vods = [], error, isLoading, refetch } = useVods();
   const addVodToCache = useAddVodToCache();
+  const completeVodUpload = useCompleteVodUpload();
+  const deleteVod = useDeleteVod();
+  const retryVodProcessing = useRetryVodProcessing();
+  const updateVod = useUpdateVod();
+  const [nowMs, setNowMs] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<VodStatus | null>(null);
+  const [vodPendingDelete, setVodPendingDelete] = useState<DashboardVod | null>(
+    null,
+  );
+  const [vodPendingEdit, setVodPendingEdit] = useState<DashboardVod | null>(
+    null,
+  );
+  const [editTitle, setEditTitle] = useState("");
+  const [editGame, setEditGame] = useState("");
   const recentVods = vods.slice(0, 4);
   const filteredVods = useMemo(
     () => filterVods(vods, searchQuery, statusFilter),
     [searchQuery, statusFilter, vods],
   );
+  const canSaveVodEdit =
+    editTitle.trim().length > 0 && editGame.trim().length > 0;
+
+  useEffect(() => {
+    function refreshNow() {
+      setNowMs(Date.now());
+    }
+
+    refreshNow();
+    const intervalID = window.setInterval(refreshNow, 60 * 1000);
+
+    return () => window.clearInterval(intervalID);
+  }, []);
 
   function handleLogout() {
     clearAuth();
     router.replace("/login");
+  }
+
+  function handleConfirmDeleteVod() {
+    if (!vodPendingDelete) {
+      return;
+    }
+
+    deleteVod.mutate(vodPendingDelete.id);
+    setVodPendingDelete(null);
+  }
+
+  function handleStartEditVod(vod: DashboardVod) {
+    setVodPendingEdit(vod);
+    setEditTitle(vod.title);
+    setEditGame(vod.game);
+  }
+
+  function handleCancelEditVod() {
+    setVodPendingEdit(null);
+    setEditTitle("");
+    setEditGame("");
+  }
+
+  function handleSaveVodEdit() {
+    if (!vodPendingEdit || !canSaveVodEdit) {
+      return;
+    }
+
+    updateVod.mutate(
+      {
+        vodID: vodPendingEdit.id,
+        title: editTitle.trim(),
+        game: editGame.trim(),
+      },
+      {
+        onSuccess: handleCancelEditVod,
+      },
+    );
+  }
+
+  function handleRecoverVod(vod: DashboardVod) {
+    const recovery = getVodRecovery(vod, nowMs);
+
+    if (!recovery) {
+      return;
+    }
+
+    if (recovery.action === VOD_RECOVERY_ACTION.completeUpload) {
+      completeVodUpload.mutate(vod.id);
+      return;
+    }
+
+    retryVodProcessing.mutate(vod.id);
   }
 
   return (
@@ -92,6 +183,11 @@ export function HomeDashboard() {
               emptyMessage="No recently updated VODs yet."
               error={error}
               isLoading={isLoading}
+              onDeleteVodRequest={setVodPendingDelete}
+              onEditVodRequest={handleStartEditVod}
+              onRetryLoad={() => refetch()}
+              onRecoverVodRequest={handleRecoverVod}
+              nowMs={nowMs}
               vods={recentVods}
             />
           </Paper>
@@ -140,10 +236,76 @@ export function HomeDashboard() {
             )}
             error={error}
             isLoading={isLoading}
+            onDeleteVodRequest={setVodPendingDelete}
+            onEditVodRequest={handleStartEditVod}
+            onRecoverVodRequest={handleRecoverVod}
+            onRetryLoad={() => refetch()}
+            nowMs={nowMs}
             vods={filteredVods}
           />
         </Stack>
       </Stack>
+      <Modal
+        centered
+        opened={vodPendingDelete !== null}
+        title="Delete VOD?"
+        onClose={() => setVodPendingDelete(null)}
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            This will permanently delete the VOD, video file, thumbnail, notes,
+            timestamped notes, and drawings.
+          </Text>
+          {vodPendingDelete ? (
+            <Text fw={600} size="sm">
+              {vodPendingDelete.title}
+            </Text>
+          ) : null}
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setVodPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              loading={deleteVod.isPending}
+              onClick={handleConfirmDeleteVod}
+            >
+              Delete
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+      <Modal
+        centered
+        opened={vodPendingEdit !== null}
+        title="Edit VOD"
+        onClose={handleCancelEditVod}
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Title"
+            value={editTitle}
+            onChange={(event) => setEditTitle(event.currentTarget.value)}
+          />
+          <TextInput
+            label="Game"
+            value={editGame}
+            onChange={(event) => setEditGame(event.currentTarget.value)}
+          />
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={handleCancelEditVod}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!canSaveVodEdit}
+              loading={updateVod.isPending}
+              onClick={handleSaveVodEdit}
+            >
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </main>
   );
 }
@@ -186,10 +348,25 @@ type VodGridProps = {
   emptyMessage: string;
   error: Error | null;
   isLoading: boolean;
+  onDeleteVodRequest: (vod: DashboardVod) => void;
+  onEditVodRequest: (vod: DashboardVod) => void;
+  onRecoverVodRequest: (vod: DashboardVod) => void;
+  onRetryLoad: () => void;
+  nowMs: number | null;
   vods: DashboardVod[];
 };
 
-function VodGrid({ emptyMessage, error, isLoading, vods }: VodGridProps) {
+function VodGrid({
+  emptyMessage,
+  error,
+  isLoading,
+  onDeleteVodRequest,
+  onEditVodRequest,
+  onRecoverVodRequest,
+  onRetryLoad,
+  nowMs,
+  vods,
+}: VodGridProps) {
   if (isLoading) {
     return (
       <Center className="vc-card" h={160}>
@@ -201,9 +378,14 @@ function VodGrid({ emptyMessage, error, isLoading, vods }: VodGridProps) {
   if (error) {
     return (
       <Paper className="vc-card" p="md" radius="md">
-        <Text size="sm" c="red">
-          Failed to load VODs
-        </Text>
+        <Group justify="space-between">
+          <Text size="sm" c="red">
+            Failed to load VODs
+          </Text>
+          <Button size="compact-sm" variant="light" onClick={onRetryLoad}>
+            Retry
+          </Button>
+        </Group>
       </Paper>
     );
   }
@@ -229,9 +411,17 @@ function VodGrid({ emptyMessage, error, isLoading, vods }: VodGridProps) {
           key={vod.id}
           game={vod.game}
           id={vod.id}
+          errorMessage={vod.error_message}
           status={vod.status}
-          thumbnailUrl={getStorageObjectURL(vod.thumbnail_storage_key)}
+          thumbnailUrl={getStorageObjectURL(
+            vod.thumbnail_storage_key,
+            vod.updated_at,
+          )}
           title={vod.title}
+          recovery={getVodRecovery(vod, nowMs)}
+          onDeleteRequest={() => onDeleteVodRequest(vod)}
+          onEditRequest={() => onEditVodRequest(vod)}
+          onRecoverRequest={() => onRecoverVodRequest(vod)}
         />
       ))}
     </SimpleGrid>

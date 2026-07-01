@@ -1,0 +1,9 @@
+ALTER TABLE drawings
+  DROP COLUMN IF EXISTS guest_name,
+  ALTER COLUMN user_id SET NOT NULL;
+
+ALTER TABLE notes
+  DROP COLUMN IF EXISTS guest_name,
+  ALTER COLUMN user_id SET NOT NULL;
+
+DROP TABLE IF EXISTS vod_shares;

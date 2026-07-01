@@ -7,14 +7,17 @@ import {
   deleteVodNote,
   getVodAnnotations,
   getVodNotes,
+  getVodPlaybackURL,
   updateVodNote,
   vodAnnotationsQueryKey,
   vodNotesQueryKey,
+  vodPlaybackURLQueryKey,
   type AnnotationsDTO,
   type CreateDrawingRequestBody,
   type NoteDTO,
   type NoteKind,
 } from "./api";
+import { reviewSyncQueryOptions } from "./query-options";
 
 type CreateVodNoteInput = {
   noteKind: NoteKind;
@@ -34,16 +37,26 @@ export function useVodNotes(vodID: string) {
   const query = useQuery({
     queryKey: vodNotesQueryKey(vodID),
     queryFn: () => getVodNotes(vodID),
+    ...reviewSyncQueryOptions,
   });
   const [notes, requestError] = query.data ?? [null, null];
 
   return {
     notes: notes ?? [],
     error: requestError ?? query.error,
+    dataUpdatedAt: query.dataUpdatedAt,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     refetch: query.refetch,
   };
+}
+
+export function useVodPlaybackURL(vodID: string) {
+  return useQuery({
+    queryKey: vodPlaybackURLQueryKey(vodID),
+    queryFn: () => getVodPlaybackURL(vodID),
+    staleTime: 50 * 60 * 1000,
+  });
 }
 
 export function useCreateVodNote(vodID: string) {
@@ -68,6 +81,7 @@ export function useCreateVodNote(vodID: string) {
       const optimisticNote: NoteDTO = {
         id: optimisticNoteID,
         vod_id: vodID,
+        guest_name: null,
         note_kind: input.noteKind,
         timestamp_seconds: input.timestampSeconds,
         note_text: input.noteText,
@@ -210,12 +224,14 @@ export function useVodAnnotations(vodID: string) {
   const query = useQuery({
     queryKey: vodAnnotationsQueryKey(vodID),
     queryFn: () => getVodAnnotations(vodID),
+    ...reviewSyncQueryOptions,
   });
   const [annotations, requestError] = query.data ?? [null, null];
 
   return {
     annotations: annotations ?? { notes: [], drawings: [] },
     error: requestError ?? query.error,
+    dataUpdatedAt: query.dataUpdatedAt,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     refetch: query.refetch,

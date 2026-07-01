@@ -13,6 +13,7 @@ import { HexColorPicker } from "react-colorful";
 import { DRAWING_TOOL, type DrawingTool } from "../drawing/types";
 
 type DrawingToolbarProps = {
+  canDraw?: boolean;
   color: string;
   drawingModeEnabled: boolean;
   isTheatreMode: boolean;
@@ -28,6 +29,7 @@ type DrawingToolbarProps = {
 };
 
 export function DrawingToolbar({
+  canDraw = true,
   color,
   drawingModeEnabled,
   isTheatreMode,
@@ -62,7 +64,7 @@ export function DrawingToolbar({
             disabled={!drawingModeEnabled}
             leftSection={<ColorSwatch color={color} size={14} />}
             size="compact-sm"
-            variant="light"
+            variant="default"
           >
             Color
           </Button>
@@ -95,11 +97,13 @@ export function DrawingToolbar({
         {isTheatreMode ? "Exit theatre" : "Theatre mode"}
       </Button>
 
-      <Switch
-        checked={drawingModeEnabled}
-        label="Drawing mode"
-        onChange={(event) => onDrawingModeChange(event.currentTarget.checked)}
-      />
+      {canDraw ? (
+        <Switch
+          checked={drawingModeEnabled}
+          label="Drawing mode"
+          onChange={(event) => onDrawingModeChange(event.currentTarget.checked)}
+        />
+      ) : null}
 
       <Switch
         checked={showDrawings}

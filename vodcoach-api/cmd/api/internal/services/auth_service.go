@@ -8,7 +8,10 @@ import (
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
 )
 
-var ErrInvalidCredentials = errors.New("invalid email or password")
+var (
+	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrWeakPassword       = errors.New("password does not meet strength requirements")
+)
 
 type AuthService struct {
 	userRepository *repository.UserRepository
@@ -31,6 +34,10 @@ type AuthResponse struct {
 }
 
 func (s *AuthService) Register(ctx context.Context, email string, password string) (*AuthResponse, error) {
+	if !auth.ValidatePasswordStrength(password) {
+		return nil, ErrWeakPassword
+	}
+
 	hashedPassword, err := auth.HashPassword(password)
 	if err != nil {
 		return nil, err

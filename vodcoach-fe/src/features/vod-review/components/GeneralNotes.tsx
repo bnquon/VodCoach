@@ -17,6 +17,8 @@ import type { GeneralNote } from "../types";
 import { NotesEmptyState } from "./NotesEmptyState";
 
 type GeneralNotesProps = {
+  canComment?: boolean;
+  canEditNotes?: boolean;
   notes: GeneralNote[];
   onCreateNote: (note: { noteText: string; tags: string[] }) => void;
   onDeleteNote: (noteID: string) => void;
@@ -35,6 +37,8 @@ function parseTags(tags: string) {
 }
 
 export function GeneralNotes({
+  canComment = true,
+  canEditNotes = true,
   notes,
   onCreateNote,
   onDeleteNote,
@@ -112,13 +116,15 @@ export function GeneralNotes({
           <Title order={2} size="sm">
             General notes
           </Title>
-          <Button
-            size="compact-xs"
-            variant={isAddingNote ? "default" : "light"}
-            onClick={isAddingNote ? handleCancelAddNote : handleStartAddNote}
-          >
-            {isAddingNote ? "Cancel" : "+ Add note"}
-          </Button>
+          {canComment ? (
+            <Button
+              size="compact-xs"
+              variant={isAddingNote ? "default" : "light"}
+              onClick={isAddingNote ? handleCancelAddNote : handleStartAddNote}
+            >
+              {isAddingNote ? "Cancel" : "+ Add note"}
+            </Button>
+          ) : null}
         </Group>
 
         <Box flex={1} mih={0} style={{ overflowY: "auto" }}>
@@ -169,32 +175,34 @@ export function GeneralNotes({
                         ))}
                       </Group>
 
-                      <Popover position="bottom-end" shadow="md">
-                        <Popover.Target>
-                          <Button size="compact-xs" variant="subtle">
-                            ...
-                          </Button>
-                        </Popover.Target>
-                        <Popover.Dropdown p={4}>
-                          <Stack gap={4}>
-                            <Button
-                              size="compact-xs"
-                              variant="subtle"
-                              onClick={() => handleStartEditNote(note)}
-                            >
-                              Edit
+                      {canEditNotes ? (
+                        <Popover position="bottom-end" shadow="md">
+                          <Popover.Target>
+                            <Button size="compact-xs" variant="subtle">
+                              ...
                             </Button>
-                            <Button
-                              color="red"
-                              size="compact-xs"
-                              variant="subtle"
-                              onClick={() => setNotePendingDelete(note)}
-                            >
-                              Delete
-                            </Button>
-                          </Stack>
-                        </Popover.Dropdown>
-                      </Popover>
+                          </Popover.Target>
+                          <Popover.Dropdown p={4}>
+                            <Stack gap={4}>
+                              <Button
+                                size="compact-xs"
+                                variant="subtle"
+                                onClick={() => handleStartEditNote(note)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                color="red"
+                                size="compact-xs"
+                                variant="subtle"
+                                onClick={() => setNotePendingDelete(note)}
+                              >
+                                Delete
+                              </Button>
+                            </Stack>
+                          </Popover.Dropdown>
+                        </Popover>
+                      ) : null}
                     </Group>
 
                     <Text size="xs">{note.noteText}</Text>

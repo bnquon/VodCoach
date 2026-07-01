@@ -7,24 +7,30 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/events"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
 	"github.com/jackc/pgx/v5"
 )
 
-const maxVodUploadBytes int64 = 2 * 1024 * 1024 * 1024 // 2GB
+const maxVodUploadBytes int64 = 500 * 1024 * 1024 // 500MB
+const staleProcessingRetryAfter = 10 * time.Minute
 
 var (
 	ErrInvalidVodUploadContentType = errors.New("invalid vod upload content type")
 	ErrVodUploadTooLarge           = errors.New("vod upload is too large")
 	ErrInvalidVodUploadMetadata    = errors.New("invalid vod upload metadata")
+	ErrInvalidVodMetadataUpdate    = errors.New("invalid vod metadata update")
+	ErrVodNotDeletable             = errors.New("vod is not deletable")
+	ErrVodNotRetryable             = errors.New("vod is not retryable")
 )
 
 type VodService struct {
-	vodRepository  *repository.VodRepository
-	storageService *StorageService
-	eventPublisher events.Publisher
+	vodRepository           *repository.VodRepository
+	storageService          *StorageService
+	thumbnailStorageService *StorageService
+	eventPublisher          events.Publisher
 }
 
 type CreateVodUploadParams struct {
@@ -43,10 +49,17 @@ type CreateVodUploadResult struct {
 	ThumbnailStorageKey string
 }
 
-func NewVodService(vodRepository *repository.VodRepository, storageService *StorageService, eventPublisher events.Publisher) *VodService {
+type UpdateVodMetadataParams struct {
+	UserID string
+	Title  *string
+	Game   *string
+}
+
+func NewVodService(vodRepository *repository.VodRepository, storageService *StorageService, thumbnailStorageService *StorageService, eventPublisher events.Publisher) *VodService {
 	return &VodService{
 		vodRepository,
 		storageService,
+		thumbnailStorageService,
 		eventPublisher,
 	}
 }
@@ -66,6 +79,53 @@ func (s *VodService) GetVod(ctx context.Context, vodID string, userID string) (*
 	}
 
 	return vod, nil
+}
+
+func (s *VodService) UpdateVodMetadata(ctx context.Context, vodID string, params UpdateVodMetadataParams) (*repository.Vod, error) {
+	title := trimOptionalString(params.Title)
+	game := trimOptionalString(params.Game)
+
+	if title == nil && game == nil {
+		return nil, ErrInvalidVodMetadataUpdate
+	}
+
+	if (title != nil && *title == "") || (game != nil && *game == "") {
+		return nil, ErrInvalidVodMetadataUpdate
+	}
+
+	vod, err := s.vodRepository.UpdateMetadataByIDAndUserID(ctx, repository.UpdateVodMetadataParams{
+		VodID:  vodID,
+		UserID: params.UserID,
+		Title:  title,
+		Game:   game,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrVodAccessDenied
+		}
+
+		return nil, err
+	}
+
+	return vod, nil
+}
+
+func (s *VodService) CreateVodPlaybackURL(ctx context.Context, vodID string, userID string) (string, error) {
+	vod, err := s.vodRepository.GetByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrVodAccessDenied
+		}
+
+		return "", err
+	}
+
+	playbackURL, err := s.storageService.CreatePresignedGetURL(ctx, vod.OriginalStorageKey, time.Hour)
+	if err != nil {
+		return "", err
+	}
+
+	return playbackURL, nil
 }
 
 func (s *VodService) CreateVodUpload(ctx context.Context, params CreateVodUploadParams) (*CreateVodUploadResult, error) {
@@ -133,8 +193,6 @@ func (s *VodService) CompleteVodUpload(ctx context.Context, vodID string, userID
 		return nil, err
 	}
 
-	
-
 	// This hands the slow post-upload work to the worker. The worker consumes
 	// vod.uploaded and updates this same VOD row through Postgres.
 	if err := s.eventPublisher.PublishVodUploaded(ctx, events.VodUploadedEvent{
@@ -149,6 +207,90 @@ func (s *VodService) CompleteVodUpload(ctx context.Context, vodID string, userID
 	return vod, nil
 }
 
+func (s *VodService) RetryVodProcessing(ctx context.Context, vodID string, userID string) (*repository.Vod, error) {
+	currentVod, err := s.vodRepository.GetByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrVodAccessDenied
+		}
+
+		return nil, err
+	}
+
+	if !canRetryVodProcessing(*currentVod, time.Now()) {
+		return nil, ErrVodNotRetryable
+	}
+
+	vod, err := s.vodRepository.MarkRetryQueuedByIDAndUserID(ctx, repository.MarkRetryQueuedParams{
+		VodID:  vodID,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrVodNotRetryable
+		}
+
+		return nil, err
+	}
+
+	if err := s.eventPublisher.PublishVodUploaded(ctx, events.VodUploadedEvent{
+		VodID:              vod.ID,
+		UserID:             vod.UserID,
+		OriginalStorageKey: vod.OriginalStorageKey,
+		UploadedAt:         vod.UpdatedAt,
+	}); err != nil {
+		return nil, err
+	}
+
+	return vod, nil
+}
+
+func canRetryVodProcessing(vod repository.Vod, now time.Time) bool {
+	switch vod.Status {
+	case "failed", "uploaded":
+		return true
+	case "processing":
+		return now.Sub(vod.UpdatedAt) >= staleProcessingRetryAfter
+	default:
+		return false
+	}
+}
+
+func (s *VodService) DeleteVod(ctx context.Context, vodID string, userID string) error {
+	vod, err := s.vodRepository.GetByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrVodAccessDenied
+		}
+
+		return err
+	}
+
+	if vod.Status != "ready" && vod.Status != "failed" {
+		return ErrVodNotDeletable
+	}
+
+	if err := s.storageService.DeleteObject(ctx, vod.OriginalStorageKey); err != nil {
+		return err
+	}
+
+	if vod.ThumbnailStorageKey != nil && strings.TrimSpace(*vod.ThumbnailStorageKey) != "" {
+		if err := s.thumbnailStorageService.DeleteObject(ctx, *vod.ThumbnailStorageKey); err != nil {
+			return err
+		}
+	}
+
+	deleted, err := s.vodRepository.DeleteByIDAndUserID(ctx, vodID, userID)
+	if err != nil {
+		return err
+	}
+	if !deleted {
+		return ErrVodAccessDenied
+	}
+
+	return nil
+}
+
 func buildOriginalStorageKey(userID string, vodID string, fileName string) string {
 	extension := strings.ToLower(filepath.Ext(fileName))
 	if extension == "" {
@@ -160,6 +302,15 @@ func buildOriginalStorageKey(userID string, vodID string, fileName string) strin
 
 func buildThumbnailStorageKey(userID string, vodID string) string {
 	return fmt.Sprintf("users/%s/vods/%s/thumbnail.jpg", userID, vodID)
+}
+
+func trimOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+
+	trimmedValue := strings.TrimSpace(*value)
+	return &trimmedValue
 }
 
 func newUUID() (string, error) {

@@ -14,18 +14,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const token = useAuthToken();
   const isExpired = token ? isAuthTokenExpired(token) : false;
+  const shouldRedirectToLogin = token === null || isExpired;
 
   useEffect(() => {
-    if (token === null || isExpired) {
-      if (isExpired) {
-        clearAuth();
-      }
-
-      router.replace("/login");
+    if (!shouldRedirectToLogin) {
+      return;
     }
-  }, [isExpired, router, token]);
 
-  if (!token || isExpired) {
+    if (isExpired) {
+      clearAuth();
+    }
+
+    router.replace("/login");
+  }, [isExpired, router, shouldRedirectToLogin]);
+
+  if (token === undefined || shouldRedirectToLogin) {
     return (
       <Center h="100vh">
         <Loader />

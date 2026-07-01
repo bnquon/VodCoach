@@ -18,6 +18,7 @@ type AnnotationHandler struct {
 type DrawingResponse struct {
 	ID               string          `json:"id"`
 	VodID            string          `json:"vod_id"`
+	GuestName        *string         `json:"guest_name"`
 	TimestampSeconds int             `json:"timestamp_seconds"`
 	DurationSeconds  int             `json:"duration_seconds"`
 	Color            string          `json:"color"`
@@ -83,7 +84,7 @@ func (h *AnnotationHandler) CreateAnnotation(c *gin.Context) {
 
 	drawing, err := h.annotationService.CreateDrawing(c.Request.Context(), repository.CreateDrawingParams{
 		VodID:            vodID,
-		UserID:           userID,
+		UserID:           &userID,
 		TimestampSeconds: *body.TimestampSeconds,
 		DurationSeconds:  *body.DurationSeconds,
 		Color:            body.Color,
@@ -121,7 +122,7 @@ func (h *AnnotationHandler) CreateAnnotationsBatch(c *gin.Context) {
 
 		params = append(params, repository.CreateDrawingParams{
 			VodID:            vodID,
-			UserID:           userID,
+			UserID:           &userID,
 			TimestampSeconds: *drawing.TimestampSeconds,
 			DurationSeconds:  *drawing.DurationSeconds,
 			Color:            drawing.Color,
@@ -147,6 +148,7 @@ func toDrawingResponse(drawing repository.Drawing) DrawingResponse {
 	return DrawingResponse{
 		ID:               drawing.ID,
 		VodID:            drawing.VodID,
+		GuestName:        drawing.GuestName,
 		TimestampSeconds: drawing.TimestampSeconds,
 		DurationSeconds:  drawing.DurationSeconds,
 		Color:            drawing.Color,

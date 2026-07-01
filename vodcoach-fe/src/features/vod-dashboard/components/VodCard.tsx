@@ -1,17 +1,35 @@
 import Link from "next/link";
-import { Badge, Box, Paper, Stack, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Button,
+  Group,
+  Menu,
+  Paper,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import { EllipsisVertical } from "lucide-react";
 import { VOD_STATUS, type VodStatus } from "@/features/vod-dashboard/api";
+import type { VodRecovery } from "@/features/vod-dashboard/recovery";
 
 type DemoVodStatus = "Ready" | "Processing" | "Failed";
 type CardVodStatus = DemoVodStatus | VodStatus;
 
 type VodCardProps = {
+  errorMessage?: string | null;
   game: string;
   id: string;
   reviewVodID?: string;
+  recovery?: VodRecovery | null;
   status: CardVodStatus;
   thumbnailUrl?: string | null;
   title: string;
+  onDeleteRequest?: () => void;
+  onEditRequest?: () => void;
+  onRecoverRequest?: () => void;
 };
 
 const statusColor: Record<CardVodStatus, string> = {
@@ -19,7 +37,7 @@ const statusColor: Record<CardVodStatus, string> = {
   Processing: "yellow",
   Failed: "red",
   [VOD_STATUS.pendingUpload]: "yellow",
-  [VOD_STATUS.uploaded]: "blue",
+  [VOD_STATUS.uploaded]: "vodcoachOrange",
   [VOD_STATUS.processing]: "yellow",
   [VOD_STATUS.ready]: "green",
   [VOD_STATUS.failed]: "red",
@@ -37,51 +55,148 @@ const statusLabel: Record<CardVodStatus, string> = {
 };
 
 export function VodCard({
+  errorMessage,
   game,
   id,
+  onDeleteRequest,
+  onEditRequest,
+  onRecoverRequest,
+  recovery,
   reviewVodID = id,
   status,
   thumbnailUrl,
   title,
 }: VodCardProps) {
+  const canDelete = status === VOD_STATUS.ready || status === VOD_STATUS.failed;
+  const isFailed = status === VOD_STATUS.failed || status === "Failed";
+
   return (
-    <Paper
-      className="vc-card"
-      component={Link}
-      href={`/vods/${reviewVodID}`}
-      p="sm"
-      radius="md"
-      style={{ color: "inherit", textDecoration: "none" }}
-    >
-      <Stack gap="xs">
-        <Paper className="vc-thumbnail" radius="sm">
-          {thumbnailUrl ? (
-            <Box
-              alt={`${title} thumbnail`}
-              className="vc-thumbnail-image"
-              component="img"
-              src={thumbnailUrl}
-            />
-          ) : (
-            <Stack h="100%" align="center" justify="center" gap={2}>
-              <Text size="xs" c="dimmed">
-                thumbnail
+    <Paper className="vc-card vc-vod-card" p="sm" radius="md">
+      <Stack gap="xs" h="100%">
+        <Box
+          className="vc-card-link"
+          component={Link}
+          href={`/vods/${reviewVodID}`}
+        >
+          <Paper className="vc-thumbnail" radius="sm">
+            {thumbnailUrl ? (
+              <Box
+                alt={`${title} thumbnail`}
+                className="vc-thumbnail-image"
+                component="img"
+                src={thumbnailUrl}
+              />
+            ) : (
+              <Stack h="100%" align="center" justify="center" gap={2}>
+                <Text size="xs" c="dimmed">
+                  thumbnail
+                </Text>
+              </Stack>
+            )}
+            {recovery && onRecoverRequest ? (
+              <Box className="vc-vod-card-failed-overlay">
+                <Button
+                  size="compact-sm"
+                  variant="filled"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onRecoverRequest();
+                  }}
+                >
+                  {recovery.label}
+                </Button>
+              </Box>
+            ) : null}
+          </Paper>
+        </Box>
+        <Group align="start" gap="xs" justify="space-between" wrap="nowrap">
+          <Box
+            className="vc-card-link"
+            component={Link}
+            flex="1 1 auto"
+            href={`/vods/${reviewVodID}`}
+            miw={0}
+          >
+            <Stack gap={2}>
+              <Text fw={600} size="sm" lineClamp={1}>
+                {title}
               </Text>
+              <Text size="xs" c="dimmed">
+                {game}
+              </Text>
+              <Badge
+                mt={6}
+                color={statusColor[status]}
+                variant="light"
+                w="fit-content"
+              >
+                {statusLabel[status]}
+              </Badge>
+              {isFailed && errorMessage ? (
+                <Tooltip label={errorMessage} multiline withArrow>
+                  <Text c="red" lineClamp={2} size="xs">
+                    {errorMessage}
+                  </Text>
+                </Tooltip>
+              ) : null}
+              {recovery && !isFailed ? (
+                <Tooltip label={recovery.message} multiline withArrow>
+                  <Text c="yellow" lineClamp={2} size="xs">
+                    Needs attention
+                  </Text>
+                </Tooltip>
+              ) : null}
             </Stack>
-          )}
-        </Paper>
-        <Stack gap={2}>
-          <Text fw={600} size="sm" lineClamp={1}>
-            {title}
-          </Text>
-          <Text size="xs" c="dimmed">
-            {game}
-          </Text>
-          <Badge color={statusColor[status]} variant="light" w="fit-content">
-            {statusLabel[status]}
-          </Badge>
-        </Stack>
+          </Box>
+          {onDeleteRequest ? (
+            <VodCardMenu
+              canDelete={canDelete}
+              onDeleteRequest={onDeleteRequest}
+              onEditRequest={onEditRequest}
+            />
+          ) : null}
+        </Group>
       </Stack>
     </Paper>
+  );
+}
+
+function VodCardMenu({
+  canDelete,
+  onDeleteRequest,
+  onEditRequest,
+}: {
+  canDelete: boolean;
+  onDeleteRequest: () => void;
+  onEditRequest?: () => void;
+}) {
+  return (
+    <Menu position="bottom-end" shadow="md" width={180}>
+      <Menu.Target>
+        <ActionIcon
+          aria-label="VOD actions"
+          className="vc-vod-action-button"
+          size="sm"
+          variant="subtle"
+        >
+          <EllipsisVertical size={16} strokeWidth={2} />
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown className="vc-vod-action-menu">
+        {onEditRequest ? (
+          <Menu.Item className="vc-vod-action-item" onClick={onEditRequest}>
+            Edit
+          </Menu.Item>
+        ) : null}
+        <Menu.Item
+          className="vc-vod-action-delete"
+          disabled={!canDelete}
+          onClick={onDeleteRequest}
+        >
+          Delete
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
   );
 }

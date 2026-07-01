@@ -23,6 +23,11 @@ type CreateVodUploadRequestBody struct {
 	FileSizeBytes int64  `json:"file_size_bytes" binding:"required,min=1"`
 }
 
+type UpdateVodMetadataRequestBody struct {
+	Title *string `json:"title"`
+	Game  *string `json:"game"`
+}
+
 type VodResponse struct {
 	ID                  string    `json:"id"`
 	Title               string    `json:"title"`
@@ -45,6 +50,10 @@ type CreateVodUploadResponse struct {
 	UploadURL           string      `json:"upload_url"`
 	OriginalStorageKey  string      `json:"original_storage_key"`
 	ThumbnailStorageKey string      `json:"thumbnail_storage_key"`
+}
+
+type VodPlaybackURLResponse struct {
+	PlaybackURL string `json:"playback_url"`
 }
 
 func NewVodHandler(vodService *services.VodService) *VodHandler {
@@ -86,6 +95,58 @@ func (h *VodHandler) GetVod(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, h.toVodResponse(*vod))
+}
+
+func (h *VodHandler) UpdateVod(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	var body UpdateVodMetadataRequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid VOD update request body"})
+		return
+	}
+
+	vod, err := h.vodService.UpdateVodMetadata(c.Request.Context(), vodID, services.UpdateVodMetadataParams{
+		UserID: userID,
+		Title:  body.Title,
+		Game:   body.Game,
+	})
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+		if errors.Is(err, services.ErrInvalidVodMetadataUpdate) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid VOD metadata"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update VOD"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.toVodResponse(*vod))
+}
+
+func (h *VodHandler) CreateVodPlaybackURL(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	playbackURL, err := h.vodService.CreateVodPlaybackURL(c.Request.Context(), vodID, userID)
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get presigned playback VOD URL"})
+		return
+	}
+
+	c.JSON(http.StatusOK, VodPlaybackURLResponse{
+		PlaybackURL: playbackURL,
+	})
 }
 
 func (h *VodHandler) CreateUpload(c *gin.Context) {
@@ -147,6 +208,50 @@ func (h *VodHandler) CompleteUpload(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, h.toVodResponse(*vod))
+}
+
+func (h *VodHandler) RetryProcessing(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	vod, err := h.vodService.RetryVodProcessing(c.Request.Context(), vodID, userID)
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+		if errors.Is(err, services.ErrVodNotRetryable) {
+			c.JSON(http.StatusConflict, gin.H{"error": "VOD is not ready to retry"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retry VOD processing"})
+		return
+	}
+
+	c.JSON(http.StatusOK, h.toVodResponse(*vod))
+}
+
+func (h *VodHandler) DeleteVod(c *gin.Context) {
+	userID := c.GetString(auth.UserIDContextKey)
+	vodID := c.Param("vodID")
+
+	err := h.vodService.DeleteVod(c.Request.Context(), vodID, userID)
+	if err != nil {
+		if errors.Is(err, services.ErrVodAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "VOD not found"})
+			return
+		}
+		if errors.Is(err, services.ErrVodNotDeletable) {
+			c.JSON(http.StatusConflict, gin.H{"error": "VOD cannot be deleted while it is processing"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete VOD"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 func (h *VodHandler) toVodResponse(vod repository.Vod) VodResponse {

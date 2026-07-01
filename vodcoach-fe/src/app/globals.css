@@ -8,6 +8,11 @@
   --vc-border: #2f2f2f;
   --vc-text: #f5f5f5;
   --vc-muted: #a3a3a3;
+  --vc-accent: #f97316;
+  --vc-accent-hover: #ea580c;
+  --vc-accent-soft: rgb(249 115 22 / 16%);
+  --vc-accent-border: rgb(249 115 22 / 34%);
+  --vc-accent-text: #fdba74;
   --vc-card-shadow: 0 18px 40px rgb(0 0 0 / 24%);
   --vc-elevated-shadow: 0 24px 60px rgb(0 0 0 / 34%);
   --mantine-color-body: var(--vc-background);
@@ -37,6 +42,33 @@ body {
   padding: 0 28px 56px;
 }
 
+.vc-footer {
+  width: 100%;
+  margin-top: 40px;
+  border-top: 1px solid var(--vc-border);
+  color: var(--vc-text);
+}
+
+.vc-footer-inner {
+  width: min(100%, 1360px);
+  margin: 0 auto;
+  padding: 32px 28px 40px;
+}
+
+.vc-footer-link {
+  color: var(--vc-muted);
+  text-decoration: none;
+}
+
+.vc-footer-link:hover {
+  color: var(--vc-accent-text);
+}
+
+.vc-footer-contact {
+  justify-self: end;
+  width: min(100%, 420px);
+}
+
 .vc-dashboard-topbar {
   min-height: 78px;
   display: flex;
@@ -52,6 +84,72 @@ body {
 
 .vc-dashboard-heading {
   margin-bottom: -4px;
+}
+
+.vc-auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.vc-auth-shell {
+  width: min(100%, 920px);
+  min-height: min(600px, calc(100vh - 56px));
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  overflow: hidden;
+  border: 1px solid var(--vc-border);
+  border-radius: 18px;
+  background: var(--vc-card);
+  box-shadow: var(--vc-elevated-shadow);
+}
+
+.vc-auth-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: clamp(24px, 4vw, 44px);
+  border: 0;
+  border-radius: 0;
+  color: var(--vc-text);
+  background: var(--vc-card);
+}
+
+.vc-auth-card > .mantine-Stack-root {
+  width: min(100%, 360px);
+}
+
+.vc-auth-inline-link {
+  color: var(--vc-accent-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.vc-auth-inline-link:hover {
+  color: var(--vc-accent);
+}
+
+.vc-auth-image-panel {
+  position: relative;
+  min-height: 100%;
+  background: var(--vc-elevated-card);
+}
+
+.vc-auth-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.vc-auth-image-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 8%), rgb(0 0 0 / 46%)),
+    radial-gradient(circle at 25% 20%, var(--vc-accent-soft), transparent 22rem);
 }
 
 .vc-dashboard-top-grid {
@@ -84,7 +182,7 @@ body {
 
 .vc-recent-vod-row {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 16px;
   align-items: center;
   background: var(--vc-card);
@@ -104,12 +202,31 @@ body {
     background-color 140ms ease;
 }
 
-a.vc-recent-vod-row:hover {
+.vc-recent-vod-row:hover {
   background: #2b2b2b;
   border-color: #5a5a5a;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 7%),
     0 18px 36px rgb(0 0 0 / 28%);
+}
+
+.vc-recent-vod-row:has(.vc-vod-action-button:hover),
+.vc-recent-vod-row:has(.vc-vod-action-button[data-expanded="true"]) {
+  background: var(--vc-card);
+  border-color: var(--vc-border);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 10px 24px rgb(0 0 0 / 18%);
+}
+
+.vc-recent-vod-link {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  color: inherit;
+  min-width: 0;
+  text-decoration: none;
 }
 
 .vc-recent-thumbnail {
@@ -169,17 +286,30 @@ a.vc-recent-vod-row:hover {
   box-shadow: var(--vc-card-shadow);
 }
 
-a.vc-card {
+.vc-vod-card {
   transition:
     transform 140ms ease,
     box-shadow 140ms ease,
     background-color 140ms ease;
 }
 
-a.vc-card:hover {
+.vc-vod-card:hover {
   background: var(--vc-elevated-card);
   box-shadow: var(--vc-elevated-shadow);
   transform: translateY(-2px);
+}
+
+.vc-vod-card:has(.vc-vod-action-button:hover),
+.vc-vod-card:has(.vc-vod-action-button[data-expanded="true"]) {
+  background: var(--vc-card);
+  box-shadow: var(--vc-card-shadow);
+  transform: none;
+}
+
+.vc-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 
 .vc-elevated-card {
@@ -195,6 +325,10 @@ a.vc-card:hover {
 
 .vc-thumbnail {
   aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   background:
     linear-gradient(135deg, rgb(229 231 235 / 8%), transparent),
     var(--vc-elevated-card);
@@ -202,11 +336,81 @@ a.vc-card:hover {
   overflow: hidden;
 }
 
+img {
+  /* Horizontal centering */
+  text-align: center;
+
+  /* Vertical centering using Flexbox */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vc-thumbnail > * {
+  width: 100%;
+  height: 100%;
+}
+
 .vc-thumbnail-image {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.vc-vod-card-failed-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 54%);
+}
+
+.vc-playback-error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 68%);
+  color: var(--vc-text);
+  text-align: center;
+}
+
+.vc-vod-action-button {
+  color: var(--vc-muted);
+}
+
+.vc-vod-action-button:hover {
+  background: #3a3a3a;
+  color: var(--vc-text);
+}
+
+.vc-upload-clear-button {
+  color: var(--vc-muted);
+  pointer-events: auto;
+}
+
+.vc-upload-clear-button:hover {
+  background: #3a3a3a;
+  color: var(--vc-text);
+}
+
+.vc-vod-action-menu {
+  background: var(--vc-elevated-card);
+  border-color: var(--vc-border);
+}
+
+.vc-vod-action-item,
+.vc-vod-action-delete {
+  color: var(--vc-text);
+}
+
+.vc-vod-action-item:hover,
+.vc-vod-action-delete:hover {
+  background: #2b2b2b;
+  color: var(--vc-text);
 }
 
 .mantine-Input-input {
@@ -241,7 +445,130 @@ a.vc-card:hover {
   color: var(--vc-muted);
 }
 
+.vc-review-page .mantine-Anchor-root {
+  color: var(--vc-accent-text);
+}
+
+.vc-review-page .mantine-Anchor-root:hover {
+  color: var(--vc-accent);
+}
+
+.vc-review-page .mantine-Button-root[data-variant="filled"] {
+  background: var(--vc-accent);
+  border-color: var(--vc-accent);
+  color: #111111;
+}
+
+.vc-review-page .mantine-Button-root[data-variant="filled"]:hover {
+  background: var(--vc-accent-hover);
+  border-color: var(--vc-accent-hover);
+}
+
+.vc-review-page .mantine-Button-root[data-variant="light"] {
+  background: var(--vc-accent-soft);
+  border-color: var(--vc-accent-border);
+  color: var(--vc-accent-text);
+}
+
+.vc-review-page .mantine-Button-root[data-variant="light"]:hover {
+  background: rgb(249 115 22 / 24%);
+  border-color: var(--vc-accent);
+  color: var(--vc-accent-text);
+}
+
+.vc-review-page .mantine-Button-root[data-variant="outline"] {
+  border-color: var(--vc-accent-border);
+  color: var(--vc-accent-text);
+}
+
+.vc-review-page .mantine-Button-root[data-variant="outline"]:hover {
+  background: var(--vc-accent-soft);
+  border-color: var(--vc-accent);
+}
+
+.vc-review-page
+  .mantine-Button-root[data-variant="subtle"]:not([data-disabled]) {
+  color: var(--vc-accent-text);
+}
+
+.vc-review-page
+  .mantine-Button-root[data-variant="subtle"]:not([data-disabled]):hover {
+  background: var(--vc-accent-soft);
+}
+
+.vc-review-page .mantine-ActionIcon-root[data-variant="subtle"] {
+  color: var(--vc-accent-text);
+}
+
+.vc-review-page .mantine-ActionIcon-root[data-variant="subtle"]:hover {
+  background: var(--vc-accent-soft);
+  color: var(--vc-accent);
+}
+
+.vc-review-page .mantine-Badge-root[data-variant="light"] {
+  background: var(--vc-accent-soft);
+  border-color: var(--vc-accent-border);
+  color: var(--vc-accent-text);
+}
+
+.vc-review-page .mantine-SegmentedControl-root {
+  background: var(--vc-card);
+}
+
+.vc-review-page .mantine-SegmentedControl-indicator {
+  background: var(--vc-accent);
+}
+
+.vc-review-page .mantine-SegmentedControl-label[data-active] {
+  color: #111111;
+}
+
+.vc-review-page .mantine-Switch-track[data-checked] {
+  background: var(--vc-accent);
+  border-color: var(--vc-accent);
+}
+
+.vc-review-page .mantine-Switch-track[data-checked]:hover {
+  background: var(--vc-accent-hover);
+  border-color: var(--vc-accent-hover);
+}
+
+.vc-review-page .mantine-Switch-thumb {
+  border-color: var(--vc-border);
+}
+
+.vc-review-page .mantine-Switch-track[data-checked] .mantine-Switch-thumb {
+  border-color: var(--vc-accent);
+}
+
+.vc-review-page .mantine-Slider-bar,
+.vc-review-page .mantine-Slider-thumb {
+  background: var(--vc-accent);
+  border-color: var(--vc-accent);
+}
+
+.vc-review-page .mantine-Slider-thumb:hover {
+  box-shadow: 0 0 0 4px var(--vc-accent-soft);
+}
+
+.vc-review-page .mantine-Input-input:focus,
+.vc-review-page .mantine-Input-input:focus-within {
+  border-color: var(--vc-accent-border);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 6%),
+    0 0 0 2px var(--vc-accent-soft);
+}
+
 @media (max-width: 1000px) {
+  .vc-auth-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .vc-auth-image-panel {
+    display: none;
+  }
+
   .vc-dashboard-top-grid {
     grid-template-columns: 1fr;
   }
@@ -258,8 +585,40 @@ a.vc-card:hover {
 }
 
 @media (max-width: 640px) {
+  .vc-auth-page {
+    padding: 16px;
+    place-items: stretch;
+  }
+
+  .vc-auth-shell {
+    min-height: calc(100vh - 32px);
+    border-radius: 14px;
+  }
+
+  .vc-auth-card {
+    align-items: flex-start;
+    padding: 22px;
+  }
+
+  .vc-auth-card > .mantine-Stack-root {
+    width: 100%;
+  }
+
   .vc-dashboard-app {
     padding: 0 16px 40px;
+  }
+
+  .vc-footer {
+    margin-top: 24px;
+  }
+
+  .vc-footer-inner {
+    padding: 28px 16px 34px;
+  }
+
+  .vc-footer-contact {
+    justify-self: stretch;
+    width: 100%;
   }
 
   .vc-dashboard-topbar {
@@ -275,12 +634,16 @@ a.vc-card:hover {
   }
 
   .vc-recent-vod-row {
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 
   .vc-recent-vod-row .mantine-Badge-root {
-    grid-column: 2;
+    grid-column: 1;
     justify-self: start;
+  }
+
+  .vc-recent-vod-link {
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .vc-recent-thumbnail {

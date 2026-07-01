@@ -1,25 +1,21 @@
 "use client";
 
 import { SubmitEvent, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Button,
-  Container,
-  Paper,
-  PasswordInput,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
-import { useMutation } from "@tanstack/react-query";
+import { PasswordInput, Stack, Text, TextInput } from "@mantine/core";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
+import { AuthSplitLayout } from "@/components/AuthSplitLayout";
 import { registerUser } from "@/lib/auth-api";
 import { saveAuth } from "@/lib/auth-storage";
+import {
+  PASSWORD_REQUIREMENTS,
+  getPasswordStrengthError,
+} from "@/lib/password-policy";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -31,6 +27,7 @@ export default function RegisterPage() {
         return;
       }
 
+      queryClient.clear();
       saveAuth(response);
       router.replace("/");
     },
@@ -38,51 +35,52 @@ export default function RegisterPage() {
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const passwordError = getPasswordStrengthError(password);
+    if (passwordError) {
+      toast.error(passwordError);
+      return;
+    }
+
     registerMutation.mutate({ email, password });
   }
 
   return (
-    <main>
-      <Container size={420} py="xl">
-        <Paper
-          className="vc-elevated-card"
-          component="form"
-          p="lg"
-          radius="md"
-          onSubmit={handleSubmit}
-        >
-          <Stack gap="md">
-            <Title order={1} size="h2">
-              Register
-            </Title>
-
-            <TextInput
-              label="Email"
-              placeholder="you@example.com"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.currentTarget.value)}
-              required
-            />
-            <PasswordInput
-              label="Password"
-              placeholder="Password"
-              value={password}
-              onChange={(event) => setPassword(event.currentTarget.value)}
-              required
-            />
-            <Button type="submit" loading={registerMutation.isPending}>
-              Create account
-            </Button>
-            <Text size="sm" c="dimmed">
-              Already have an account?{" "}
-              <Text component={Link} href="/login" inherit c="blue">
-                Login
+    <AuthSplitLayout
+      isSubmitting={registerMutation.isPending}
+      switchHref="/login"
+      switchLabel="Login"
+      switchPrompt="Already have an account?"
+      submitLabel="Create account"
+      subtitle="Create an account with your email and password."
+      title="Create an account"
+      onSubmit={handleSubmit}
+    >
+      <TextInput
+        label="Email"
+        placeholder="you@example.com"
+        type="email"
+        value={email}
+        onChange={(event) => setEmail(event.currentTarget.value)}
+        required
+      />
+      <PasswordInput
+        label="Password"
+        placeholder="Password"
+        description={
+          <Stack gap={2} mt={4}>
+            {PASSWORD_REQUIREMENTS.map((requirement) => (
+              <Text key={requirement} c="dimmed" size="xs">
+                {requirement}
               </Text>
-            </Text>
+            ))}
           </Stack>
-        </Paper>
-      </Container>
-    </main>
+        }
+        error={password ? getPasswordStrengthError(password) : null}
+        value={password}
+        onChange={(event) => setPassword(event.currentTarget.value)}
+        required
+      />
+    </AuthSplitLayout>
   );
 }

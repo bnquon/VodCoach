@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AspectRatio, Box, Paper, Stack, Text } from "@mantine/core";
+import { AspectRatio, Box, Button, Paper, Stack, Text } from "@mantine/core";
 import { useResizeObserver } from "@mantine/hooks";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { Circle, Layer, Line, Rect, Stage } from "react-konva";
@@ -31,12 +31,14 @@ import {
 import { DrawingToolbar } from "./DrawingToolbar";
 
 type UploadedVideoPlayerProps = {
+  canDraw?: boolean;
   drawingAnnotations: DrawingAnnotation[];
   isTheatreMode: boolean;
   src: string;
-  title: string;
   videoRef: React.RefObject<HTMLVideoElement | null>;
+  isRefreshingPlayback?: boolean;
   onDurationChange?: (durationSeconds: number) => void;
+  onRefreshPlayback?: () => void;
   onSaveDrawingAnnotations: (
     drawingAnnotations: DrawingAnnotation[],
   ) => Promise<void>;
@@ -45,14 +47,16 @@ type UploadedVideoPlayerProps = {
 };
 
 export function UploadedVideoPlayer({
+  canDraw = true,
   drawingAnnotations,
   isTheatreMode,
+  isRefreshingPlayback = false,
   onDurationChange,
+  onRefreshPlayback,
   onSaveDrawingAnnotations,
   onTheatreModeChange,
   onTimeChange,
   src,
-  title,
   videoRef,
 }: UploadedVideoPlayerProps) {
   const [containerRef, containerRect] = useResizeObserver<HTMLDivElement>();
@@ -65,6 +69,7 @@ export function UploadedVideoPlayer({
   const [strokeWidth, setStrokeWidth] = useState(5);
   const [tool, setTool] = useState<DrawingTool>(DRAWING_TOOL.pen);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
+  const [hasPlaybackError, setHasPlaybackError] = useState(false);
   const activeAnnotationId = useRef<string | null>(null);
   const isDrawing = useRef(false);
   const isSavingDrawings = useRef(false);
@@ -105,7 +110,7 @@ export function UploadedVideoPlayer({
   }, [localDrawingAnnotations, onSaveDrawingAnnotations]);
 
   function handleMouseDown(event: KonvaEventObject<MouseEvent>) {
-    if (!isDrawingModeEnabled) {
+    if (!canDraw || !isDrawingModeEnabled) {
       return;
     }
 
@@ -169,7 +174,7 @@ export function UploadedVideoPlayer({
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {
-    if (!isDrawingModeEnabled || !isDrawing.current) {
+    if (!canDraw || !isDrawingModeEnabled || !isDrawing.current) {
       return;
     }
 
@@ -268,6 +273,7 @@ export function UploadedVideoPlayer({
       return;
     }
 
+    setHasPlaybackError(false);
     video.src = src;
     video.load();
 
@@ -295,10 +301,10 @@ export function UploadedVideoPlayer({
     <Paper className="vc-elevated-card" p="md" radius="md">
       <Stack gap="sm">
         <Stack gap="sm">
-          <Text fw={600}>{title}</Text>
           <DrawingToolbar
+            canDraw={canDraw}
             color={drawingColor}
-            drawingModeEnabled={isDrawingModeEnabled}
+            drawingModeEnabled={canDraw ? isDrawingModeEnabled : false}
             isTheatreMode={isTheatreMode}
             showDrawings={showDrawings}
             strokeWidth={strokeWidth}
@@ -318,16 +324,18 @@ export function UploadedVideoPlayer({
             disablePictureInPicture
             controls
             preload="metadata"
+            src={src}
             onLoadedMetadata={(event) =>
               onDurationChange?.(event.currentTarget.duration)
             }
+            onError={() => setHasPlaybackError(true)}
             onTimeUpdate={(event) => handleTimeUpdate(event.currentTarget)}
           />
           <Box
             pos="absolute"
             inset={0}
             style={{
-              pointerEvents: isDrawingModeEnabled ? "auto" : "none",
+              pointerEvents: canDraw && isDrawingModeEnabled ? "auto" : "none",
             }}
           >
             <Stage
@@ -402,6 +410,23 @@ export function UploadedVideoPlayer({
               </Layer>
             </Stage>
           </Box>
+          {hasPlaybackError ? (
+            <Box className="vc-playback-error-overlay">
+              <Stack align="center" gap="xs">
+                <Text fw={700} size="sm">
+                  Video link expired or failed to load
+                </Text>
+                <Button
+                  loading={isRefreshingPlayback}
+                  size="compact-sm"
+                  variant="filled"
+                  onClick={onRefreshPlayback}
+                >
+                  Refresh video
+                </Button>
+              </Stack>
+            </Box>
+          ) : null}
         </AspectRatio>
       </Stack>
     </Paper>

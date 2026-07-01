@@ -1,15 +1,33 @@
 import Link from "next/link";
-import { Badge, Box, Center, Loader, Paper, Stack, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Button,
+  Center,
+  Group,
+  Loader,
+  Menu,
+  Paper,
+  Stack,
+  Text,
+} from "@mantine/core";
+import { EllipsisVertical } from "lucide-react";
 import {
   getStorageObjectURL,
   VOD_STATUS,
   type VodDTO,
 } from "@/features/vod-dashboard/api";
+import {
+  getVodRecovery,
+  type VodRecovery,
+} from "@/features/vod-dashboard/recovery";
 
 export type DashboardVod = Pick<
   VodDTO,
   | "game"
   | "id"
+  | "error_message"
   | "processing_progress"
   | "status"
   | "thumbnail_storage_key"
@@ -21,6 +39,11 @@ type RecentVodListProps = {
   emptyMessage: string;
   error: Error | null;
   isLoading: boolean;
+  onDeleteVodRequest?: (vod: DashboardVod) => void;
+  onEditVodRequest?: (vod: DashboardVod) => void;
+  onRecoverVodRequest?: (vod: DashboardVod) => void;
+  onRetryLoad?: () => void;
+  nowMs: number | null;
   vods: DashboardVod[];
 };
 
@@ -28,6 +51,11 @@ export function RecentVodList({
   emptyMessage,
   error,
   isLoading,
+  onDeleteVodRequest,
+  onEditVodRequest,
+  onRecoverVodRequest,
+  onRetryLoad,
+  nowMs,
   vods,
 }: RecentVodListProps) {
   if (isLoading) {
@@ -40,9 +68,16 @@ export function RecentVodList({
 
   if (error) {
     return (
-      <Text size="sm" c="red">
-        Failed to load VODs
-      </Text>
+      <Group justify="space-between">
+        <Text size="sm" c="red">
+          Failed to load VODs
+        </Text>
+        {onRetryLoad ? (
+          <Button size="compact-xs" variant="light" onClick={onRetryLoad}>
+            Retry
+          </Button>
+        ) : null}
+      </Group>
     );
   }
 
@@ -57,58 +92,158 @@ export function RecentVodList({
   return (
     <Stack className="vc-recent-list" gap="sm">
       {vods.map((vod) => (
-        <RecentVodRow key={vod.id} vod={vod} />
+        <RecentVodRow
+          key={vod.id}
+          onDeleteRequest={
+            onDeleteVodRequest ? () => onDeleteVodRequest(vod) : undefined
+          }
+          onEditRequest={
+            onEditVodRequest ? () => onEditVodRequest(vod) : undefined
+          }
+          onRecoverRequest={
+            onRecoverVodRequest ? () => onRecoverVodRequest(vod) : undefined
+          }
+          recovery={getVodRecovery(vod, nowMs)}
+          vod={vod}
+        />
       ))}
     </Stack>
   );
 }
 
-function RecentVodRow({ vod }: { vod: DashboardVod }) {
-  const thumbnailUrl = getStorageObjectURL(vod.thumbnail_storage_key);
+function RecentVodRow({
+  onDeleteRequest,
+  onEditRequest,
+  onRecoverRequest,
+  recovery,
+  vod,
+}: {
+  onDeleteRequest?: () => void;
+  onEditRequest?: () => void;
+  onRecoverRequest?: () => void;
+  recovery?: VodRecovery | null;
+  vod: DashboardVod;
+}) {
+  const thumbnailUrl = getStorageObjectURL(
+    vod.thumbnail_storage_key,
+    vod.updated_at,
+  );
+  const canDelete =
+    vod.status === VOD_STATUS.ready || vod.status === VOD_STATUS.failed;
 
   return (
-    <Paper
-      className="vc-recent-vod-row"
-      component={Link}
-      href={`/vods/${vod.id}`}
-      radius="md"
-    >
-      <Box className="vc-recent-thumbnail">
-        {thumbnailUrl ? (
-          <Box
-            alt={`${vod.title} thumbnail`}
-            className="vc-thumbnail-image"
-            component="img"
-            src={thumbnailUrl}
-          />
-        ) : (
-          <Center h="100%">
-            <Text size="xs" c="dimmed">
-              thumbnail
-            </Text>
-          </Center>
-        )}
-      </Box>
-      <Stack gap={4}>
-        <Text fw={600} lineClamp={1}>
-          {vod.title}
-        </Text>
-        <Text size="xs" c="dimmed" lineClamp={1}>
-          {vod.game} · updated {formatLastUpdated(vod.updated_at)}
-        </Text>
-        {vod.status === VOD_STATUS.processing ? (
-          <Box className="vc-recent-progress">
+    <Paper className="vc-recent-vod-row" radius="md">
+      <Box
+        className="vc-recent-vod-link"
+        component={Link}
+        href={`/vods/${vod.id}`}
+      >
+        <Box className="vc-recent-thumbnail">
+          {thumbnailUrl ? (
             <Box
-              className="vc-recent-progress-fill"
-              style={{ width: `${vod.processing_progress}%` }}
+              alt={`${vod.title} thumbnail`}
+              className="vc-thumbnail-image"
+              component="img"
+              src={thumbnailUrl}
             />
-          </Box>
-        ) : null}
-      </Stack>
+          ) : (
+            <Center h="100%">
+              <Text size="xs" c="dimmed">
+                thumbnail
+              </Text>
+            </Center>
+          )}
+        </Box>
+        <Stack gap={4} miw={0}>
+          <Text fw={600} lineClamp={1}>
+            {vod.title}
+          </Text>
+          <Text size="xs" c="dimmed" lineClamp={1}>
+            {vod.game} · updated {formatLastUpdated(vod.updated_at)}
+          </Text>
+          {vod.status === VOD_STATUS.processing ? (
+            <Box className="vc-recent-progress">
+              <Box
+                className="vc-recent-progress-fill"
+                style={{ width: `${vod.processing_progress}%` }}
+              />
+            </Box>
+          ) : null}
+          {vod.status === VOD_STATUS.failed && vod.error_message ? (
+            <Text c="red" lineClamp={1} size="xs">
+              {vod.error_message}
+            </Text>
+          ) : null}
+          {recovery && vod.status !== VOD_STATUS.failed ? (
+            <Text c="yellow" lineClamp={1} size="xs">
+              {recovery.message}
+            </Text>
+          ) : null}
+        </Stack>
+      </Box>
       <Badge color={getStatusColor(vod.status)} variant="light" w="fit-content">
         {getStatusLabel(vod.status)}
       </Badge>
+      {recovery && onRecoverRequest ? (
+        <Button
+          size="compact-xs"
+          variant="light"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onRecoverRequest();
+          }}
+        >
+          {recovery.label}
+        </Button>
+      ) : null}
+      {onDeleteRequest ? (
+        <RecentVodMenu
+          canDelete={canDelete}
+          onDeleteRequest={onDeleteRequest}
+          onEditRequest={onEditRequest}
+        />
+      ) : null}
     </Paper>
+  );
+}
+
+function RecentVodMenu({
+  canDelete,
+  onDeleteRequest,
+  onEditRequest,
+}: {
+  canDelete: boolean;
+  onDeleteRequest: () => void;
+  onEditRequest?: () => void;
+}) {
+  return (
+    <Menu position="bottom-end" shadow="md" width={180}>
+      <Menu.Target>
+        <ActionIcon
+          aria-label="VOD actions"
+          className="vc-vod-action-button"
+          size="sm"
+          variant="subtle"
+        >
+          <EllipsisVertical size={16} strokeWidth={2} />
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown className="vc-vod-action-menu">
+        {onEditRequest ? (
+          <Menu.Item className="vc-vod-action-item" onClick={onEditRequest}>
+            Edit
+          </Menu.Item>
+        ) : null}
+        <Menu.Item
+          className="vc-vod-action-delete"
+          disabled={!canDelete}
+          onClick={onDeleteRequest}
+        >
+          Delete
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
   );
 }
 

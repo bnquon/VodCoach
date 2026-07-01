@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Box, Flex, Stack } from "@mantine/core";
+import { Box, Center, Flex, Loader, Paper, Stack, Text } from "@mantine/core";
 import { NOTE_KIND } from "../api";
 import {
   useCreateVodDrawingsBatch,
@@ -10,6 +10,7 @@ import {
   useUpdateVodNote,
   useVodAnnotations,
   useVodNotes,
+  useVodPlaybackURL,
 } from "../hooks";
 import {
   toDrawingAnnotations,
@@ -18,20 +19,34 @@ import {
 } from "../mappers";
 import { DEFAULT_START_COLOR, type DrawingAnnotation } from "../drawing/types";
 import { GeneralNotes } from "./GeneralNotes";
+import { ReviewSyncStatus } from "./ReviewSyncStatus";
 import { TimeStampedNotes } from "./TimeStampedNotes";
 import { UploadedVideoPlayer } from "./UploadedVideoPlayer";
 
 interface VodReviewWorkspaceProps {
   videoId: string;
-  vodTitle: string;
 }
 
-export function VodReviewWorkspace({
-  videoId,
-  vodTitle,
-}: VodReviewWorkspaceProps) {
-  const { notes: fetchedNotes } = useVodNotes(videoId);
-  const { annotations } = useVodAnnotations(videoId);
+export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
+  const {
+    notes: fetchedNotes,
+    dataUpdatedAt: notesUpdatedAt,
+    isFetching: isNotesFetching,
+    refetch: refetchNotes,
+  } = useVodNotes(videoId);
+  const {
+    annotations,
+    dataUpdatedAt: annotationsUpdatedAt,
+    isFetching: isAnnotationsFetching,
+    refetch: refetchAnnotations,
+  } = useVodAnnotations(videoId);
+  const {
+    data: playbackURL,
+    error: playbackURLError,
+    isFetching: isPlaybackURLFetching,
+    isLoading: isPlaybackURLLoading,
+    refetch: refetchPlaybackURL,
+  } = useVodPlaybackURL(videoId);
   const createNote = useCreateVodNote(videoId);
   const updateNote = useUpdateVodNote(videoId);
   const deleteNote = useDeleteVodNote(videoId);
@@ -95,6 +110,11 @@ export function VodReviewWorkspace({
     });
   }
 
+  function handleUpdateReviewData() {
+    refetchNotes();
+    refetchAnnotations();
+  }
+
   function handleUpdateTimestampedNote(note: {
     id: string;
     noteText: string;
@@ -124,6 +144,11 @@ export function VodReviewWorkspace({
 
   return (
     <Stack gap="xl">
+      <ReviewSyncStatus
+        isFetching={isNotesFetching || isAnnotationsFetching}
+        lastUpdatedAt={Math.max(notesUpdatedAt, annotationsUpdatedAt)}
+        onUpdateNow={handleUpdateReviewData}
+      />
       <Flex
         direction={{ base: "column", lg: isTheatreMode ? "column" : "row" }}
         gap="sm"
@@ -136,17 +161,34 @@ export function VodReviewWorkspace({
           }}
           w="100%"
         >
-          <UploadedVideoPlayer
-            drawingAnnotations={drawingAnnotations}
-            src="/TestVod.mp4"
-            title={vodTitle}
-            isTheatreMode={isTheatreMode}
-            videoRef={videoPlayerRef}
-            onDurationChange={setDurationSeconds}
-            onSaveDrawingAnnotations={handleSaveDrawingAnnotations}
-            onTheatreModeChange={setIsTheatreMode}
-            onTimeChange={setCurrentTimeSeconds}
-          />
+          {isPlaybackURLLoading ? (
+            <Paper className="vc-card" radius="md">
+              <Center h={360}>
+                <Loader size="sm" />
+              </Center>
+            </Paper>
+          ) : playbackURLError || !playbackURL?.playback_url ? (
+            <Paper className="vc-card" radius="md">
+              <Center h={360}>
+                <Text size="sm" c="red">
+                  Failed to load playback URL
+                </Text>
+              </Center>
+            </Paper>
+          ) : (
+            <UploadedVideoPlayer
+              drawingAnnotations={drawingAnnotations}
+              src={playbackURL.playback_url}
+              isTheatreMode={isTheatreMode}
+              isRefreshingPlayback={isPlaybackURLFetching}
+              videoRef={videoPlayerRef}
+              onDurationChange={setDurationSeconds}
+              onRefreshPlayback={() => refetchPlaybackURL()}
+              onSaveDrawingAnnotations={handleSaveDrawingAnnotations}
+              onTheatreModeChange={setIsTheatreMode}
+              onTimeChange={setCurrentTimeSeconds}
+            />
+          )}
         </Box>
 
         <Flex
