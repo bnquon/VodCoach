@@ -144,7 +144,7 @@ export function AppFooter() {
               required
               autosize
               label="Message"
-              minRows={4}
+              minRows={3}
               name="message"
               placeholder="How can we help?"
               value={message}

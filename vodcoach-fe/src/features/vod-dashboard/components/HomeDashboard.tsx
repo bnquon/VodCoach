@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -27,11 +27,16 @@ import {
 } from "@/features/vod-dashboard/api";
 import {
   useAddVodToCache,
+  useCompleteVodUpload,
   useDeleteVod,
   useRetryVodProcessing,
   useUpdateVod,
   useVods,
 } from "@/features/vod-dashboard/hooks";
+import {
+  VOD_RECOVERY_ACTION,
+  getVodRecovery,
+} from "@/features/vod-dashboard/recovery";
 import { clearAuth } from "@/lib/auth-storage";
 import { useAuthUser } from "@/lib/use-auth";
 
@@ -40,9 +45,11 @@ export function HomeDashboard() {
   const user = useAuthUser();
   const { data: vods = [], error, isLoading, refetch } = useVods();
   const addVodToCache = useAddVodToCache();
+  const completeVodUpload = useCompleteVodUpload();
   const deleteVod = useDeleteVod();
   const retryVodProcessing = useRetryVodProcessing();
   const updateVod = useUpdateVod();
+  const [nowMs, setNowMs] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<VodStatus | null>(null);
   const [vodPendingDelete, setVodPendingDelete] = useState<DashboardVod | null>(
@@ -60,6 +67,17 @@ export function HomeDashboard() {
   );
   const canSaveVodEdit =
     editTitle.trim().length > 0 && editGame.trim().length > 0;
+
+  useEffect(() => {
+    function refreshNow() {
+      setNowMs(Date.now());
+    }
+
+    refreshNow();
+    const intervalID = window.setInterval(refreshNow, 60 * 1000);
+
+    return () => window.clearInterval(intervalID);
+  }, []);
 
   function handleLogout() {
     clearAuth();
@@ -102,6 +120,21 @@ export function HomeDashboard() {
         onSuccess: handleCancelEditVod,
       },
     );
+  }
+
+  function handleRecoverVod(vod: DashboardVod) {
+    const recovery = getVodRecovery(vod, nowMs);
+
+    if (!recovery) {
+      return;
+    }
+
+    if (recovery.action === VOD_RECOVERY_ACTION.completeUpload) {
+      completeVodUpload.mutate(vod.id);
+      return;
+    }
+
+    retryVodProcessing.mutate(vod.id);
   }
 
   return (
@@ -153,7 +186,8 @@ export function HomeDashboard() {
               onDeleteVodRequest={setVodPendingDelete}
               onEditVodRequest={handleStartEditVod}
               onRetryLoad={() => refetch()}
-              onRetryVodRequest={(vod) => retryVodProcessing.mutate(vod.id)}
+              onRecoverVodRequest={handleRecoverVod}
+              nowMs={nowMs}
               vods={recentVods}
             />
           </Paper>
@@ -204,8 +238,9 @@ export function HomeDashboard() {
             isLoading={isLoading}
             onDeleteVodRequest={setVodPendingDelete}
             onEditVodRequest={handleStartEditVod}
-            onRetryVodRequest={(vod) => retryVodProcessing.mutate(vod.id)}
+            onRecoverVodRequest={handleRecoverVod}
             onRetryLoad={() => refetch()}
+            nowMs={nowMs}
             vods={filteredVods}
           />
         </Stack>
@@ -315,8 +350,9 @@ type VodGridProps = {
   isLoading: boolean;
   onDeleteVodRequest: (vod: DashboardVod) => void;
   onEditVodRequest: (vod: DashboardVod) => void;
+  onRecoverVodRequest: (vod: DashboardVod) => void;
   onRetryLoad: () => void;
-  onRetryVodRequest: (vod: DashboardVod) => void;
+  nowMs: number | null;
   vods: DashboardVod[];
 };
 
@@ -326,8 +362,9 @@ function VodGrid({
   isLoading,
   onDeleteVodRequest,
   onEditVodRequest,
+  onRecoverVodRequest,
   onRetryLoad,
-  onRetryVodRequest,
+  nowMs,
   vods,
 }: VodGridProps) {
   if (isLoading) {
@@ -381,9 +418,10 @@ function VodGrid({
             vod.updated_at,
           )}
           title={vod.title}
+          recovery={getVodRecovery(vod, nowMs)}
           onDeleteRequest={() => onDeleteVodRequest(vod)}
           onEditRequest={() => onEditVodRequest(vod)}
-          onRetryRequest={() => onRetryVodRequest(vod)}
+          onRecoverRequest={() => onRecoverVodRequest(vod)}
         />
       ))}
     </SimpleGrid>

@@ -19,6 +19,7 @@ import {
 } from "../mappers";
 import { DEFAULT_START_COLOR, type DrawingAnnotation } from "../drawing/types";
 import { GeneralNotes } from "./GeneralNotes";
+import { ReviewSyncStatus } from "./ReviewSyncStatus";
 import { TimeStampedNotes } from "./TimeStampedNotes";
 import { UploadedVideoPlayer } from "./UploadedVideoPlayer";
 
@@ -27,8 +28,18 @@ interface VodReviewWorkspaceProps {
 }
 
 export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
-  const { notes: fetchedNotes } = useVodNotes(videoId);
-  const { annotations } = useVodAnnotations(videoId);
+  const {
+    notes: fetchedNotes,
+    dataUpdatedAt: notesUpdatedAt,
+    isFetching: isNotesFetching,
+    refetch: refetchNotes,
+  } = useVodNotes(videoId);
+  const {
+    annotations,
+    dataUpdatedAt: annotationsUpdatedAt,
+    isFetching: isAnnotationsFetching,
+    refetch: refetchAnnotations,
+  } = useVodAnnotations(videoId);
   const {
     data: playbackURL,
     error: playbackURLError,
@@ -99,6 +110,11 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
     });
   }
 
+  function handleUpdateReviewData() {
+    refetchNotes();
+    refetchAnnotations();
+  }
+
   function handleUpdateTimestampedNote(note: {
     id: string;
     noteText: string;
@@ -128,6 +144,11 @@ export function VodReviewWorkspace({ videoId }: VodReviewWorkspaceProps) {
 
   return (
     <Stack gap="xl">
+      <ReviewSyncStatus
+        isFetching={isNotesFetching || isAnnotationsFetching}
+        lastUpdatedAt={Math.max(notesUpdatedAt, annotationsUpdatedAt)}
+        onUpdateNow={handleUpdateReviewData}
+      />
       <Flex
         direction={{ base: "column", lg: isTheatreMode ? "column" : "row" }}
         gap="sm"

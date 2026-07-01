@@ -127,7 +127,10 @@ export function useSharedNotes(shareToken: string, enabled: boolean) {
   return {
     notes: notes ?? [],
     error: requestError ?? query.error,
+    dataUpdatedAt: query.dataUpdatedAt,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    refetch: query.refetch,
   };
 }
 
@@ -143,7 +146,10 @@ export function useSharedAnnotations(shareToken: string, enabled: boolean) {
   return {
     annotations: annotations ?? { notes: [], drawings: [] },
     error: requestError ?? query.error,
+    dataUpdatedAt: query.dataUpdatedAt,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    refetch: query.refetch,
   };
 }
 

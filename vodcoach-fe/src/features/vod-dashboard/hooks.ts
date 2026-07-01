@@ -2,6 +2,7 @@ import { isAxiosError } from "axios";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import {
+  completeVodUpload,
   deleteVod,
   getVod,
   getVods,
@@ -142,6 +143,53 @@ export function useRetryVodProcessing() {
       );
       queryClient.setQueryData(vodQueryKey(updatedVod.id), updatedVod);
       toast.success("VOD retry queued");
+    },
+    onSettled: (_data, _error, vodID) => {
+      queryClient.invalidateQueries({ queryKey: vodsQueryKey });
+      queryClient.invalidateQueries({ queryKey: vodQueryKey(vodID) });
+    },
+  });
+}
+
+export function useCompleteVodUpload() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: completeVodUpload,
+    onMutate: async (vodID) => {
+      await queryClient.cancelQueries({ queryKey: vodsQueryKey });
+
+      const previousVods = queryClient.getQueryData<VodDTO[]>(vodsQueryKey);
+
+      queryClient.setQueryData<VodDTO[]>(vodsQueryKey, (currentVods) =>
+        (currentVods ?? []).map((vod) =>
+          vod.id === vodID
+            ? {
+                ...vod,
+                status: VOD_STATUS.uploaded,
+                processing_progress: 100,
+                error_message: null,
+              }
+            : vod,
+        ),
+      );
+
+      return { previousVods };
+    },
+    onError: (error, _vodID, context) => {
+      queryClient.setQueryData(vodsQueryKey, context?.previousVods);
+      toast.error(
+        getVodMutationErrorMessage(error, "Failed to complete upload"),
+      );
+    },
+    onSuccess: (updatedVod) => {
+      queryClient.setQueryData<VodDTO[]>(vodsQueryKey, (currentVods) =>
+        (currentVods ?? []).map((vod) =>
+          vod.id === updatedVod.id ? updatedVod : vod,
+        ),
+      );
+      queryClient.setQueryData(vodQueryKey(updatedVod.id), updatedVod);
+      toast.success("Upload completion queued");
     },
     onSettled: (_data, _error, vodID) => {
       queryClient.invalidateQueries({ queryKey: vodsQueryKey });

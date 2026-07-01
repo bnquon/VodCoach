@@ -60,6 +60,11 @@ type MarkVodProcessingFailedParams struct {
 	ErrorMessage string
 }
 
+type MarkRetryQueuedParams struct {
+	VodID  string
+	UserID string
+}
+
 func NewVodRepository(pool *pgxpool.Pool) *VodRepository {
 	return &VodRepository{
 		pool,
@@ -250,6 +255,7 @@ func (r *VodRepository) MarkUploadComplete(ctx context.Context, vodID string, us
 			updated_at = now()
 		WHERE id = $1
 			AND user_id = $2
+			AND status IN ('pending_upload', 'uploaded')
 		RETURNING id, user_id, title, game, original_storage_key, thumbnail_storage_key,
 			original_filename, content_type, duration_seconds, width, height, status, processing_progress,
 			error_message, created_at, updated_at
@@ -292,6 +298,7 @@ func (r *VodRepository) UpdateMetadataByIDAndUserID(ctx context.Context, params 
 			updated_at = now()
 		WHERE id = $1
 			AND user_id = $2
+			AND status IN ('failed', 'uploaded', 'processing')
 		RETURNING id, user_id, title, game, original_storage_key, thumbnail_storage_key,
 			original_filename, content_type, duration_seconds, width, height, status, processing_progress,
 			error_message, created_at, updated_at
@@ -343,7 +350,25 @@ func (r *VodRepository) UpdateStatus(ctx context.Context, vodID string, status s
 	return nil
 }
 
-func (r *VodRepository) MarkRetryQueuedByIDAndUserID(ctx context.Context, vodID string, userID string) (*Vod, error) {
+func (r *VodRepository) MarkProcessingStartedIfUploaded(ctx context.Context, vodID string) (bool, error) {
+	result, err := r.pool.Exec(
+		ctx,
+		`UPDATE vods
+		SET status = 'processing',
+			error_message = NULL,
+			updated_at = now()
+		WHERE id = $1
+			AND status = 'uploaded'`,
+		vodID,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return result.RowsAffected() > 0, nil
+}
+
+func (r *VodRepository) MarkRetryQueuedByIDAndUserID(ctx context.Context, params MarkRetryQueuedParams) (*Vod, error) {
 	var vod Vod
 
 	err := r.pool.QueryRow(
@@ -355,13 +380,12 @@ func (r *VodRepository) MarkRetryQueuedByIDAndUserID(ctx context.Context, vodID 
 			updated_at = now()
 		WHERE id = $1
 			AND user_id = $2
-			AND status = 'failed'
 		RETURNING id, user_id, title, game, original_storage_key, thumbnail_storage_key,
 			original_filename, content_type, duration_seconds, width, height, status, processing_progress,
 			error_message, created_at, updated_at
 		`,
-		vodID,
-		userID,
+		params.VodID,
+		params.UserID,
 	).Scan(
 		&vod.ID,
 		&vod.UserID,

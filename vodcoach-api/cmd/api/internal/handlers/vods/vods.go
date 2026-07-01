@@ -221,7 +221,7 @@ func (h *VodHandler) RetryProcessing(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, services.ErrVodNotRetryable) {
-			c.JSON(http.StatusConflict, gin.H{"error": "Only failed VODs can be retried"})
+			c.JSON(http.StatusConflict, gin.H{"error": "VOD is not ready to retry"})
 			return
 		}
 

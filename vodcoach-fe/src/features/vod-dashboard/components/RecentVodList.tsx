@@ -18,6 +18,10 @@ import {
   VOD_STATUS,
   type VodDTO,
 } from "@/features/vod-dashboard/api";
+import {
+  getVodRecovery,
+  type VodRecovery,
+} from "@/features/vod-dashboard/recovery";
 
 export type DashboardVod = Pick<
   VodDTO,
@@ -37,8 +41,9 @@ type RecentVodListProps = {
   isLoading: boolean;
   onDeleteVodRequest?: (vod: DashboardVod) => void;
   onEditVodRequest?: (vod: DashboardVod) => void;
+  onRecoverVodRequest?: (vod: DashboardVod) => void;
   onRetryLoad?: () => void;
-  onRetryVodRequest?: (vod: DashboardVod) => void;
+  nowMs: number | null;
   vods: DashboardVod[];
 };
 
@@ -48,8 +53,9 @@ export function RecentVodList({
   isLoading,
   onDeleteVodRequest,
   onEditVodRequest,
+  onRecoverVodRequest,
   onRetryLoad,
-  onRetryVodRequest,
+  nowMs,
   vods,
 }: RecentVodListProps) {
   if (isLoading) {
@@ -94,9 +100,10 @@ export function RecentVodList({
           onEditRequest={
             onEditVodRequest ? () => onEditVodRequest(vod) : undefined
           }
-          onRetryRequest={
-            onRetryVodRequest ? () => onRetryVodRequest(vod) : undefined
+          onRecoverRequest={
+            onRecoverVodRequest ? () => onRecoverVodRequest(vod) : undefined
           }
+          recovery={getVodRecovery(vod, nowMs)}
           vod={vod}
         />
       ))}
@@ -107,12 +114,14 @@ export function RecentVodList({
 function RecentVodRow({
   onDeleteRequest,
   onEditRequest,
-  onRetryRequest,
+  onRecoverRequest,
+  recovery,
   vod,
 }: {
   onDeleteRequest?: () => void;
   onEditRequest?: () => void;
-  onRetryRequest?: () => void;
+  onRecoverRequest?: () => void;
+  recovery?: VodRecovery | null;
   vod: DashboardVod;
 }) {
   const thumbnailUrl = getStorageObjectURL(
@@ -165,22 +174,27 @@ function RecentVodRow({
               {vod.error_message}
             </Text>
           ) : null}
+          {recovery && vod.status !== VOD_STATUS.failed ? (
+            <Text c="yellow" lineClamp={1} size="xs">
+              {recovery.message}
+            </Text>
+          ) : null}
         </Stack>
       </Box>
       <Badge color={getStatusColor(vod.status)} variant="light" w="fit-content">
         {getStatusLabel(vod.status)}
       </Badge>
-      {vod.status === VOD_STATUS.failed && onRetryRequest ? (
+      {recovery && onRecoverRequest ? (
         <Button
           size="compact-xs"
           variant="light"
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            onRetryRequest();
+            onRecoverRequest();
           }}
         >
-          Retry
+          {recovery.label}
         </Button>
       ) : null}
       {onDeleteRequest ? (

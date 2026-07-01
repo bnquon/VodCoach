@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/events"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/repository"
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/services"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -125,10 +127,24 @@ func processVodUploaded(
 	mediaService *services.MediaService,
 	event events.VodUploadedEvent,
 ) error {
-	log.Printf("marking vod processing: vod_id=%s", event.VodID)
-	if err := vodRepository.UpdateStatus(ctx, event.VodID, "processing"); err != nil {
+	startedProcessing, err := vodRepository.MarkProcessingStartedIfUploaded(ctx, event.VodID)
+	if err != nil {
 		return err
 	}
+	if !startedProcessing {
+		currentVod, err := vodRepository.GetByID(ctx, event.VodID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			log.Printf("skipping vod.uploaded for missing vod: vod_id=%s", event.VodID)
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		log.Printf("skipping vod.uploaded: vod_id=%s status=%s", event.VodID, currentVod.Status)
+		return nil
+	}
+	log.Printf("marked vod processing: vod_id=%s", event.VodID)
 
 	vod, err := vodRepository.GetByIDAndUserID(ctx, event.VodID, event.UserID)
 	if err != nil {

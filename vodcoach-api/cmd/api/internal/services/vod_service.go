@@ -15,6 +15,7 @@ import (
 )
 
 const maxVodUploadBytes int64 = 500 * 1024 * 1024 // 500MB
+const staleProcessingRetryAfter = 10 * time.Minute
 
 var (
 	ErrInvalidVodUploadContentType = errors.New("invalid vod upload content type")
@@ -216,11 +217,14 @@ func (s *VodService) RetryVodProcessing(ctx context.Context, vodID string, userI
 		return nil, err
 	}
 
-	if currentVod.Status != "failed" {
+	if !canRetryVodProcessing(*currentVod, time.Now()) {
 		return nil, ErrVodNotRetryable
 	}
 
-	vod, err := s.vodRepository.MarkRetryQueuedByIDAndUserID(ctx, vodID, userID)
+	vod, err := s.vodRepository.MarkRetryQueuedByIDAndUserID(ctx, repository.MarkRetryQueuedParams{
+		VodID:  vodID,
+		UserID: userID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrVodNotRetryable
@@ -239,6 +243,17 @@ func (s *VodService) RetryVodProcessing(ctx context.Context, vodID string, userI
 	}
 
 	return vod, nil
+}
+
+func canRetryVodProcessing(vod repository.Vod, now time.Time) bool {
+	switch vod.Status {
+	case "failed", "uploaded":
+		return true
+	case "processing":
+		return now.Sub(vod.UpdatedAt) >= staleProcessingRetryAfter
+	default:
+		return false
+	}
 }
 
 func (s *VodService) DeleteVod(ctx context.Context, vodID string, userID string) error {

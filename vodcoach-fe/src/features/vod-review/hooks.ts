@@ -44,6 +44,7 @@ export function useVodNotes(vodID: string) {
   return {
     notes: notes ?? [],
     error: requestError ?? query.error,
+    dataUpdatedAt: query.dataUpdatedAt,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     refetch: query.refetch,
@@ -230,6 +231,7 @@ export function useVodAnnotations(vodID: string) {
   return {
     annotations: annotations ?? { notes: [], drawings: [] },
     error: requestError ?? query.error,
+    dataUpdatedAt: query.dataUpdatedAt,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     refetch: query.refetch,

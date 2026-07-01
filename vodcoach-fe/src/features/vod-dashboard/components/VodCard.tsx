@@ -13,6 +13,7 @@ import {
 } from "@mantine/core";
 import { EllipsisVertical } from "lucide-react";
 import { VOD_STATUS, type VodStatus } from "@/features/vod-dashboard/api";
+import type { VodRecovery } from "@/features/vod-dashboard/recovery";
 
 type DemoVodStatus = "Ready" | "Processing" | "Failed";
 type CardVodStatus = DemoVodStatus | VodStatus;
@@ -22,12 +23,13 @@ type VodCardProps = {
   game: string;
   id: string;
   reviewVodID?: string;
+  recovery?: VodRecovery | null;
   status: CardVodStatus;
   thumbnailUrl?: string | null;
   title: string;
   onDeleteRequest?: () => void;
   onEditRequest?: () => void;
-  onRetryRequest?: () => void;
+  onRecoverRequest?: () => void;
 };
 
 const statusColor: Record<CardVodStatus, string> = {
@@ -58,11 +60,12 @@ export function VodCard({
   id,
   onDeleteRequest,
   onEditRequest,
+  onRecoverRequest,
+  recovery,
   reviewVodID = id,
   status,
   thumbnailUrl,
   title,
-  onRetryRequest,
 }: VodCardProps) {
   const canDelete = status === VOD_STATUS.ready || status === VOD_STATUS.failed;
   const isFailed = status === VOD_STATUS.failed || status === "Failed";
@@ -90,7 +93,7 @@ export function VodCard({
                 </Text>
               </Stack>
             )}
-            {isFailed && onRetryRequest ? (
+            {recovery && onRecoverRequest ? (
               <Box className="vc-vod-card-failed-overlay">
                 <Button
                   size="compact-sm"
@@ -98,10 +101,10 @@ export function VodCard({
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    onRetryRequest();
+                    onRecoverRequest();
                   }}
                 >
-                  Retry processing
+                  {recovery.label}
                 </Button>
               </Box>
             ) : null}
@@ -134,6 +137,13 @@ export function VodCard({
                 <Tooltip label={errorMessage} multiline withArrow>
                   <Text c="red" lineClamp={2} size="xs">
                     {errorMessage}
+                  </Text>
+                </Tooltip>
+              ) : null}
+              {recovery && !isFailed ? (
+                <Tooltip label={recovery.message} multiline withArrow>
+                  <Text c="yellow" lineClamp={2} size="xs">
+                    Needs attention
                   </Text>
                 </Tooltip>
               ) : null}
