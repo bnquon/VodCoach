@@ -3,6 +3,7 @@ package shares
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -300,6 +301,7 @@ func (h *ShareHandler) CreateSharedAnnotationsBatch(c *gin.Context) {
 
 	drawings, err := h.shareService.CreateSharedDrawings(c.Request.Context(), claims, params)
 	if err != nil {
+		log.Printf("failed to create shared annotations batch: share_id=%s vod_id=%s drawings=%d error=%v", claims.ShareID, claims.VodID, len(params), err)
 		respondShareError(c, err)
 		return
 	}

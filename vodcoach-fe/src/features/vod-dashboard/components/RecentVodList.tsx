@@ -162,14 +162,6 @@ function RecentVodRow({
           <Text size="xs" c="dimmed" lineClamp={1}>
             {vod.game} · updated {formatLastUpdated(vod.updated_at)}
           </Text>
-          {vod.status === VOD_STATUS.processing ? (
-            <Box className="vc-recent-progress">
-              <Box
-                className="vc-recent-progress-fill"
-                style={{ width: `${vod.processing_progress}%` }}
-              />
-            </Box>
-          ) : null}
           {vod.status === VOD_STATUS.failed && vod.error_message ? (
             <Text c="red" lineClamp={1} size="xs">
               {vod.error_message}

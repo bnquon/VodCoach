@@ -243,6 +243,7 @@ export function useCreateVodDrawingsBatch(vodID: string) {
   const queryKey = vodAnnotationsQueryKey(vodID);
 
   return useMutation({
+    retry: false,
     mutationFn: (drawings: CreateDrawingRequestBody[]) =>
       createVodDrawingsBatch(vodID, { drawings }),
     onSuccess: (createdDrawings) => {

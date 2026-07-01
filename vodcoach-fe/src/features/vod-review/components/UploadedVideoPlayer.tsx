@@ -73,6 +73,7 @@ export function UploadedVideoPlayer({
   const activeAnnotationId = useRef<string | null>(null);
   const isDrawing = useRef(false);
   const isSavingDrawings = useRef(false);
+  const failedSaveFingerprint = useRef<string | null>(null);
 
   const allDrawingAnnotations = [
     ...drawingAnnotations,
@@ -92,6 +93,11 @@ export function UploadedVideoPlayer({
     }
 
     const drawingsToSave = localDrawingAnnotations;
+    const saveFingerprint = getDrawingSaveFingerprint(drawingsToSave);
+    if (failedSaveFingerprint.current === saveFingerprint) {
+      return;
+    }
+
     const savedDrawingIDs = new Set(
       drawingsToSave.map((drawing) => drawing.id),
     );
@@ -104,6 +110,10 @@ export function UploadedVideoPlayer({
           (annotation) => !savedDrawingIDs.has(annotation.id),
         ),
       );
+      failedSaveFingerprint.current = null;
+    } catch (error) {
+      failedSaveFingerprint.current = saveFingerprint;
+      throw error;
     } finally {
       isSavingDrawings.current = false;
     }
@@ -171,6 +181,7 @@ export function UploadedVideoPlayer({
         drawingJson: [drawingShape],
       },
     ]);
+    failedSaveFingerprint.current = null;
   }
 
   function handleMouseMove(event: KonvaEventObject<MouseEvent>) {
@@ -431,4 +442,26 @@ export function UploadedVideoPlayer({
       </Stack>
     </Paper>
   );
+}
+
+function getDrawingSaveFingerprint(drawingAnnotations: DrawingAnnotation[]) {
+  return drawingAnnotations
+    .map((annotation) => {
+      const shapeFingerprints = annotation.drawingJson
+        .map((drawing) => {
+          if (drawing.type === DRAWING_SHAPE_TYPE.freehand) {
+            return `${drawing.id}:${drawing.points.length}`;
+          }
+
+          if (drawing.type === DRAWING_SHAPE_TYPE.rectangle) {
+            return `${drawing.id}:${drawing.x}:${drawing.y}:${drawing.width}:${drawing.height}`;
+          }
+
+          return `${drawing.id}:${drawing.x}:${drawing.y}:${drawing.radius}`;
+        })
+        .join(",");
+
+      return `${annotation.id}:${annotation.timestampSeconds}:${annotation.durationSeconds}:${shapeFingerprints}`;
+    })
+    .join("|");
 }

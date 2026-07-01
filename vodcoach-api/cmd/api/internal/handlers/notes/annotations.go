@@ -3,6 +3,7 @@ package notes
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/bnquon/vodcoach-api/cmd/api/internal/auth"
@@ -96,6 +97,7 @@ func (h *AnnotationHandler) CreateAnnotation(c *gin.Context) {
 			return
 		}
 
+		log.Printf("failed to create annotation: vod_id=%s user_id=%s error=%v", vodID, userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create annotation"})
 		return
 	}
@@ -137,6 +139,7 @@ func (h *AnnotationHandler) CreateAnnotationsBatch(c *gin.Context) {
 			return
 		}
 
+		log.Printf("failed to create annotations batch: vod_id=%s user_id=%s drawings=%d error=%v", vodID, userID, len(params), err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create annotations"})
 		return
 	}
