@@ -90,7 +90,7 @@ func (s *MediaService) ProbeVideo(ctx context.Context, filePath string) (*VideoM
 	}, nil
 }
 
-func (s *MediaService) GenerateThumbnail(ctx context.Context, filePath string) (string, error) {
+func (s *MediaService) GenerateThumbnail(ctx context.Context, filePath string, durationSeconds int) (string, error) {
 	thumbnailFile, err := os.CreateTemp("", "vodcoach-thumbnail-*.jpg")
 	if err != nil {
 		return "", fmt.Errorf("create thumbnail temp file: %w", err)
@@ -104,7 +104,7 @@ func (s *MediaService) GenerateThumbnail(ctx context.Context, filePath string) (
 		ctx,
 		"ffmpeg",
 		"-y",
-		"-ss", "00:00:03",
+		"-ss", getThumbnailTimestamp(durationSeconds),
 		"-i", filePath,
 		"-vf", "scale=1280:-1",
 		"-vframes", "1",
@@ -115,4 +115,12 @@ func (s *MediaService) GenerateThumbnail(ctx context.Context, filePath string) (
 	}
 
 	return thumbnailPath, nil
+}
+
+func getThumbnailTimestamp(durationSeconds int) string {
+	if durationSeconds <= 3 {
+		return "00:00:00"
+	}
+
+	return "00:00:03"
 }
