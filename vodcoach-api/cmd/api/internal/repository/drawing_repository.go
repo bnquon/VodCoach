@@ -91,7 +91,7 @@ func (r *DrawingRepository) CreateDrawing(ctx context.Context, params CreateDraw
 	err := r.pool.QueryRow(
 		ctx,
 		`INSERT INTO drawings (vod_id, user_id, guest_name, timestamp_seconds, duration_seconds, color, drawing_json)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
 		RETURNING id, vod_id, user_id, guest_name, timestamp_seconds, duration_seconds, color, drawing_json, created_at, updated_at
 		`,
 		params.VodID,
@@ -100,7 +100,7 @@ func (r *DrawingRepository) CreateDrawing(ctx context.Context, params CreateDraw
 		params.TimestampSeconds,
 		params.DurationSeconds,
 		params.Color,
-		params.DrawingJSON,
+		string(params.DrawingJSON),
 	).Scan(
 		&drawing.ID,
 		&drawing.VodID,
@@ -138,7 +138,7 @@ func (r *DrawingRepository) CreateDrawings(ctx context.Context, params []CreateD
 		err := tx.QueryRow(
 			ctx,
 			`INSERT INTO drawings (vod_id, user_id, guest_name, timestamp_seconds, duration_seconds, color, drawing_json)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
 			RETURNING id, vod_id, user_id, guest_name, timestamp_seconds, duration_seconds, color, drawing_json, created_at, updated_at
 			`,
 			drawingParams.VodID,
@@ -147,7 +147,7 @@ func (r *DrawingRepository) CreateDrawings(ctx context.Context, params []CreateD
 			drawingParams.TimestampSeconds,
 			drawingParams.DurationSeconds,
 			drawingParams.Color,
-			drawingParams.DrawingJSON,
+			string(drawingParams.DrawingJSON),
 		).Scan(
 			&drawing.ID,
 			&drawing.VodID,

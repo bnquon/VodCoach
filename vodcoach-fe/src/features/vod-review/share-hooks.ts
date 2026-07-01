@@ -184,6 +184,7 @@ export function useCreateSharedDrawingsBatch(shareToken: string) {
   const queryKey = sharedAnnotationsQueryKey(shareToken);
 
   return useMutation({
+    retry: false,
     mutationFn: (drawings: CreateDrawingRequestBody[]) =>
       createSharedDrawingsBatch(shareToken, { drawings }),
     onSuccess: (createdDrawings) => {

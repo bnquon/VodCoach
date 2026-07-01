@@ -236,20 +236,6 @@ body {
   border-radius: 8px;
 }
 
-.vc-recent-progress {
-  width: min(210px, 100%);
-  height: 7px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--vc-elevated-card);
-}
-
-.vc-recent-progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: currentcolor;
-}
-
 .vc-dashboard-library {
   margin-top: 8px;
 }
