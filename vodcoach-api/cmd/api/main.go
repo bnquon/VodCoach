@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -21,7 +20,7 @@ func main() {
 	ctx := context.Background()
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("No .env file found; using environment variables")
 	}
 
 	dbURL := os.Getenv("DB_URL")
@@ -61,19 +60,24 @@ func main() {
 	defer eventPublisher.Close()
 	router := server.NewRouter(pool, bucketName, thumbnailBucketName, client, eventPublisher)
 
-	if err := router.Run(":8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	if err := router.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
 }
 
 func newEventPublisher() events.Publisher {
-	brokers := strings.TrimSpace(os.Getenv("REDPANDA_BROKERS"))
-	if brokers == "" {
+	brokers := events.ParseBrokerList(os.Getenv("REDPANDA_BROKERS"))
+	if len(brokers) == 0 {
 		log.Println("REDPANDA_BROKERS is empty; using no-op event publisher")
 		return events.NewNoopPublisher()
 	}
 
-	publisher, err := events.NewRedpandaPublisher(strings.Split(brokers, ","))
+	publisher, err := events.NewRedpandaPublisher(brokers)
 	if err != nil {
 		log.Fatal(err)
 	}

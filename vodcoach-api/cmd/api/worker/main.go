@@ -27,7 +27,7 @@ func main() {
 	ctx := context.Background()
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("No .env file found; using environment variables")
 	}
 
 	dbURL := os.Getenv("DB_URL")
@@ -41,17 +41,22 @@ func main() {
 	}
 	defer pool.Close()
 
-	brokers := strings.Split(os.Getenv("REDPANDA_BROKERS"), ",")
-	if len(brokers) == 0 || strings.TrimSpace(brokers[0]) == "" {
+	brokers := events.ParseBrokerList(os.Getenv("REDPANDA_BROKERS"))
+	if len(brokers) == 0 {
 		log.Fatal("REDPANDA_BROKERS environment variable is required")
 	}
 
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(brokers...),
+	kafkaOptions, err := events.NewKafkaClientOptions(
+		brokers,
 		kgo.ConsumerGroup(workerConsumerGroup),
 		kgo.ConsumeTopics(events.VodUploadedTopic),
 		kgo.ConsumeResetOffset(kgo.NewOffset().AtStart()),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client, err := kgo.NewClient(kafkaOptions...)
 	if err != nil {
 		log.Fatal(err)
 	}

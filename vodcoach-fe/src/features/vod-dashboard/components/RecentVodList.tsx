@@ -19,6 +19,7 @@ import {
   type VodDTO,
 } from "@/features/vod-dashboard/api";
 import {
+  canDeleteVod,
   getVodRecovery,
   type VodRecovery,
 } from "@/features/vod-dashboard/recovery";
@@ -104,6 +105,7 @@ export function RecentVodList({
             onRecoverVodRequest ? () => onRecoverVodRequest(vod) : undefined
           }
           recovery={getVodRecovery(vod, nowMs)}
+          canDelete={canDeleteVod(vod, nowMs)}
           vod={vod}
         />
       ))}
@@ -112,12 +114,14 @@ export function RecentVodList({
 }
 
 function RecentVodRow({
+  canDelete,
   onDeleteRequest,
   onEditRequest,
   onRecoverRequest,
   recovery,
   vod,
 }: {
+  canDelete: boolean;
   onDeleteRequest?: () => void;
   onEditRequest?: () => void;
   onRecoverRequest?: () => void;
@@ -128,9 +132,6 @@ function RecentVodRow({
     vod.thumbnail_storage_key,
     vod.updated_at,
   );
-  const canDelete =
-    vod.status === VOD_STATUS.ready || vod.status === VOD_STATUS.failed;
-
   return (
     <Paper className="vc-recent-vod-row" radius="md">
       <Box

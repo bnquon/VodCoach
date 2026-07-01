@@ -5,6 +5,7 @@ vodcoach-fe/public/*.mp4
 .env
 .env.*
 !.env.example
+vodcoach-api/certs/
 
 # Go build outputs
 .cache/

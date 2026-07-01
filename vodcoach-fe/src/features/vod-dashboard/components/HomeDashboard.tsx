@@ -35,6 +35,7 @@ import {
 } from "@/features/vod-dashboard/hooks";
 import {
   VOD_RECOVERY_ACTION,
+  canDeleteVod,
   getVodRecovery,
 } from "@/features/vod-dashboard/recovery";
 import { clearAuth } from "@/lib/auth-storage";
@@ -411,6 +412,7 @@ function VodGrid({
           key={vod.id}
           game={vod.game}
           id={vod.id}
+          canDelete={canDeleteVod(vod, nowMs)}
           errorMessage={vod.error_message}
           status={vod.status}
           thumbnailUrl={getStorageObjectURL(

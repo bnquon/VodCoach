@@ -266,7 +266,7 @@ func (s *VodService) DeleteVod(ctx context.Context, vodID string, userID string)
 		return err
 	}
 
-	if vod.Status != "ready" && vod.Status != "failed" {
+	if !canDeleteVod(*vod, time.Now()) {
 		return ErrVodNotDeletable
 	}
 
@@ -289,6 +289,17 @@ func (s *VodService) DeleteVod(ctx context.Context, vodID string, userID string)
 	}
 
 	return nil
+}
+
+func canDeleteVod(vod repository.Vod, now time.Time) bool {
+	switch vod.Status {
+	case "ready", "failed", "uploaded", "pending_upload":
+		return true
+	case "processing":
+		return now.Sub(vod.UpdatedAt) >= staleProcessingRetryAfter
+	default:
+		return false
+	}
 }
 
 func buildOriginalStorageKey(userID string, vodID string, fileName string) string {
